@@ -11,6 +11,7 @@
 
 import { getContext, extension_settings } from '/scripts/extensions.js';
 import { eventSource, event_types, saveSettingsDebounced } from '/script.js';
+import { user_avatar } from '/scripts/personas.js';
 
 const EXT_ID = 'mindware';
 const STATE_KEY = 'MindWare';          // per-chat state in chat metadata; matches the core's VAR_KEY
@@ -78,9 +79,12 @@ function getCharAvatarPath() {
 }
 // the active persona's avatar — used for the user subject chip
 function getPersonaAvatarPath() {
-    const ctx = getContext();
-    const file = ctx.userAvatar;
-    return file ? `/User%20Avatars/${encodeURIComponent(file)}` : null; // TEST@ST
+    if (!user_avatar) return null;
+    try {
+        const ctx = getContext();
+        if (ctx.getThumbnailUrl) return ctx.getThumbnailUrl('persona', user_avatar);
+    } catch (e) { /* fall through */ }
+    return `/User%20Avatars/${encodeURIComponent(user_avatar)}`;
 }
 
 // ── quiet generation (sync / persona / scene analysis) ──────────────────────────
@@ -399,7 +403,7 @@ function initMindWare() {
       ro_Dominant: 'Dominant', ro_Equal: 'Equal', ro_Submissive: 'Submissive', ro_Servant: 'Servant',
       es_Low: 'Low', es_Unstable: 'Unstable', es_High: 'High',
       ki_Unaware: 'Unaware', ki_Curious: 'Curious', ki_Needy: 'Needy', ki_Addicted: 'Addicted',
-      p_talkativeness: 'Talkativeness', p_affection: 'Attitude ({{user}})', p_courage: 'Courage',
+      p_talkativeness: 'Talkativeness', p_affection: 'Attitude ({{user}})', p_affection_user: 'Attitude ({{char}})', p_courage: 'Courage',
       p_libido: 'Libido', p_sensitivity: 'Sensitivity', p_arousal: 'Constant Arousal',
       p_sadism: 'Sadism', p_masochism: 'Masochism', p_lewd_speech: 'Lewd Speech', p_fertility: 'Fertility',
       p_arms: 'Arms', p_legs: 'Legs', p_eyes: 'Eyes', p_breasts: 'Breasts', p_members: 'Penises',
@@ -494,6 +498,7 @@ function initMindWare() {
       ui_sure_x: 'Unlock extreme protocols? These modules are not covered by warranty.',
       ui_sure_b: 'Unlock BIO-LAB? Flesh modifications are irreversible-grade strain on the psyche.',
       ui_yes: 'I AM SURE', ui_no: 'CANCEL',
+      ui_18plus: 'By continuing, you confirm that you are 18 years of age or older.',
       ui_reset: 'RESET TO ORIGINAL', ui_factory: 'FACTORY RESET',
       ui_rollback: 'ROLLBACK', ui_current: 'CURRENT', ui_nohist: 'No patches deployed yet.',
       ui_invert: 'Total Inversion', ui_random: '???',
@@ -529,7 +534,8 @@ function initMindWare() {
       ui_integritylost: '☠ SUBJECT INTEGRITY LOST',
       ui_ro_note: 'Read-only: this subject is you. Enable Self-Editing in SYS to seize control.',
       ui_addsubj: 'LINK NEW SUBJECT', ui_add_self: 'Link myself', ui_scan_scene: 'Scan scene for subjects',
-      ui_cancel: 'Cancel', ui_back: 'BACK',
+      ui_cancel: 'Cancel', ui_back: 'BACK', ui_close: 'Close', ui_enable: 'Enable MindWare',
+      ui_subj_max: 'Subject limit reached (max 5).', ui_subj_warn: 'More than 3 linked subjects may cause errors or slowdowns. Add anyway?',
       ui_scene_pick: 'DETECTED IN SCENE', ui_scene_none: 'No other subjects found in the scene.',
       ui_subj_linked: 'SUBJECT LINKED: {0}',
       ui_unlink: 'UNLINK', ui_resetsub: 'RESET',
@@ -565,7 +571,7 @@ function initMindWare() {
       p_pain_threshold: 'Порог боли', p_regeneration: 'Регенерация', p_perception: 'Восприятие', p_hairiness: 'Волосатость',
       p_submission: 'Покорность', p_dominance: 'Доминация', p_intelligence: 'Интеллект',
       p_shyness: 'Стыдливость', p_aggression: 'Агрессивность', p_emotionality: 'Эмоциональность', p_empathy: 'Эмпатия',
-      p_talkativeness: 'Разговорчивость', p_affection: 'Отношение ({{user}})', p_courage: 'Смелость',
+      p_talkativeness: 'Разговорчивость', p_affection: 'Отношение ({{user}})', p_affection_user: 'Отношение ({{char}})', p_courage: 'Смелость',
       p_libido: 'Либидо', p_sensitivity: 'Чувствительность', p_arousal: 'Пост. возбуждение',
       p_sadism: 'Садизм', p_masochism: 'Мазохизм', p_lewd_speech: 'Непристойность речи', p_fertility: 'Фертильность',
       p_arms: 'Руки', p_legs: 'Ноги', p_eyes: 'Глаза', p_breasts: 'Груди', p_members: 'Члены',
@@ -644,6 +650,7 @@ function initMindWare() {
       ui_sure_x: 'Разблокировать экстрим-протоколы? Гарантия на эти модули не распространяется.',
       ui_sure_b: 'Разблокировать BIO-LAB? Модификации плоти — необратимая нагрузка на психику.',
       ui_yes: 'Я УВЕРЕН/А', ui_no: 'ОТМЕНА',
+      ui_18plus: 'Продолжая, вы подтверждаете, что вам исполнилось 18 лет.',
       ui_reset: 'СБРОС К ОРИГИНАЛУ', ui_factory: 'ПОЛНЫЙ СБРОС',
       ui_rollback: 'ОТКАТ', ui_current: 'ТЕКУЩАЯ', ui_nohist: 'Патчи ещё не применялись.',
       ui_invert: 'Полная инверсия', ui_random: '???',
@@ -679,7 +686,8 @@ function initMindWare() {
       ui_integritylost: '☠ ЦЕЛОСТНОСТЬ СУБЪЕКТА УТРАЧЕНА',
       ui_ro_note: 'Только просмотр: этот субъект — ты. Включи «Редактирование себя» в СИСТ, чтобы перехватить контроль.',
       ui_addsubj: 'НОВЫЙ СУБЪЕКТ', ui_add_self: 'Подключить себя', ui_scan_scene: 'Сканировать сцену',
-      ui_cancel: 'Отмена', ui_back: 'НАЗАД',
+      ui_cancel: 'Отмена', ui_back: 'НАЗАД', ui_close: 'Закрыть', ui_enable: 'Включить MindWare',
+      ui_subj_max: 'Достигнут предел субъектов (макс. 5).', ui_subj_warn: 'Больше 3 субъектов может вызывать ошибки или тормоза. Всё равно добавить?',
       ui_scene_pick: 'ОБНАРУЖЕНЫ В СЦЕНЕ', ui_scene_none: 'Других субъектов в сцене не найдено.',
       ui_subj_linked: 'СУБЪЕКТ ПОДКЛЮЧЁН: {0}',
       ui_unlink: 'ОТКЛЮЧИТЬ', ui_resetsub: 'СБРОС',
@@ -814,6 +822,8 @@ function initMindWare() {
   }
   function pLabel(key) {
     if (KINK_KEY2NAME[key]) return mac(t('k_' + KINK_KEY2NAME[key]));
+    // a user subject's "attitude" is toward the character, not toward themselves
+    if (key === 'affection' && subj().kind === 'user') return mac(t('p_affection_user'));
     return mac(t('p_' + key));
   }
   // English label for the AI command (kink keys map to their kink name)
@@ -883,11 +893,16 @@ function initMindWare() {
   function allRefs() { return [state].concat(state.subjects || []); }
   function sidOf(ref) { return ref === state ? 'char' : ref.id; }
   function refOf(sid) { return sid === 'char' ? state : ((state.subjects || []).find(s => s.id === sid) || state); }
-  function subjMacro(ref) { return ref === state ? '{{char}}' : (ref.kind === 'user' ? '{{user}}' : ref.name); }
+  function subjMacro(ref) { return ref === state ? '{{char}}' : ref.name; }
   function subjName(ref) { return ref === state ? (state.charName || 'CHAR') : ref.name; }
   function subj() { return refOf(state.selSubj); }
   function isEditable(ref) { return ref === state || ref.kind === 'npc' || state.settings.selfEdit; }
-  function findUserSubj() { return (state.subjects || []).find(s => s.kind === 'user'); }
+  // the user subject tied to the CURRENTLY active persona (legacy ones with no
+  // persona field match any, preserving single-user behaviour in old chats)
+  function findUserSubj() {
+    const av = user_avatar || 'default';
+    return (state.subjects || []).find(s => s.kind === 'user' && (!s.persona || s.persona === av));
+  }
   function heightRange(set) { return SCALE_RANGES[(set && set.scale) || 'Normal'] || SCALE_RANGES.Normal; }
 
   // per-parameter-set migration: legacy scales + renames + backfill new keys
@@ -922,6 +937,7 @@ function initMindWare() {
     if (!AWARE_MODES.includes(ref.awareness)) ref.awareness = 'full';
     if (!ref.stats) ref.stats = freshStats();
     if (typeof ref.corruption !== 'number') ref.corruption = 0;
+    if (ref !== state && ref.kind === 'user' && !ref.name) ref.name = mac('{{user}}') || 'USER';
     // collapse threshold moved from 0 to -100; clear stale flags
     if (ref.psyche > PSY_MIN) ref.collapsed = false;
     [ref.original, ref.applied, ref.draft].forEach(migrate);
@@ -1024,15 +1040,17 @@ function initMindWare() {
   /* ================= DIFF / DAMAGE ================= */
 
   // → list of {key, note (localized UI), cmd (English for AI), dmg}
-  function computeDiffs(from, to) {
+  // isUser: the diff belongs to a user subject (affection points at {{char}}, not {{user}})
+  function computeDiffs(from, to, isUser) {
     const out = [];
     SLIDERS.forEach(([, key, min, max, , w]) => {
       const a = from[key], b = to[key];
       if (a !== b && b !== undefined) {
+        const enL = (key === 'affection' && isUser) ? 'Attitude (toward {{char}})' : enLabel(key);
         out.push({
           key,
           note: `${pLabel(key)}: ${fmtVal(key, b)} (${t('d_was')} ${fmtVal(key, a)})`,
-          cmd: `${enLabel(key)}: ${fmtVal(key, a, true)} -> ${fmtVal(key, b, true)}`,
+          cmd: `${enL}: ${fmtVal(key, a, true)} -> ${fmtVal(key, b, true)}`,
           dmg: Math.max(1, Math.round(w * Math.abs(b - a) / (max - min))),
         });
       }
@@ -1137,7 +1155,7 @@ function initMindWare() {
     const sections = [];
     let anyActive = false;
     allRefs().forEach(ref => {
-      const diffs = computeDiffs(ref.original, ref.applied);
+      const diffs = computeDiffs(ref.original, ref.applied, ref.kind === 'user');
       const active = diffs.length || (state.settings.psyche && ref.psyche < 100);
       if (ref !== state && !active) return;
       if (active) anyActive = true;
@@ -1202,13 +1220,56 @@ function initMindWare() {
 
   function updateStateInject() {
     try {
-      const text = buildStateText();
+      const text = isEnabled() ? buildStateText() : null;
       if (text) {
         injectPrompts([{ id: INJ_STATE, position: 'in_chat', depth: 1, role: 'system', content: text, should_scan: true }]);
       } else {
         uninjectPrompts([INJ_STATE]);
       }
     } catch (e) { console.error('[MindWare] inject failed', e); }
+  }
+
+  /* ----- enable / disable (toggle in ST's Extensions list) ----- */
+
+  function isEnabled() { const s = extension_settings[EXT_ID]; return !s || s.enabled !== false; }
+  function setEnabled(v) {
+    extension_settings[EXT_ID] = Object.assign(extension_settings[EXT_ID] || {}, { enabled: !!v });
+    saveSettingsDebounced();
+    applyEnabled();
+  }
+  function applyEnabled() {
+    const on = isEnabled();
+    if (bubble) bubble.style.display = on ? '' : 'none';
+    if (!on) {
+      if (panelOpen) togglePanel();
+      try { uninjectPrompts([INJ_STATE, INJ_CMD]); } catch (e) { /* ignore */ }
+      clearInterval(watchdog);
+    } else {
+      if (!D.getElementById(ROOT_ID)) buildShell();
+      if (bubble) bubble.style.display = '';
+      startWatchdog();
+      updateStateInject();
+    }
+  }
+  // settings block with an on/off toggle inside ST's Extensions drawer
+  function addSettingsUi() {
+    const host = D.getElementById('extensions_settings') || D.getElementById('extensions_settings2');
+    if (!host || D.getElementById('mindware_ext_settings')) return;
+    const div = D.createElement('div');
+    div.id = 'mindware_ext_settings';
+    div.innerHTML = `
+      <div class="inline-drawer">
+        <div class="inline-drawer-toggle inline-drawer-header"><b>🧠 MindWare</b>
+          <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>
+        <div class="inline-drawer-content">
+          <label class="checkbox_label" style="display:flex;gap:8px;align-items:center;cursor:pointer">
+            <input type="checkbox" id="mindware_enabled_cb"><span>${esc(t('ui_enable'))}</span></label>
+        </div>
+      </div>`;
+    host.appendChild(div);
+    const cb = div.querySelector('#mindware_enabled_cb');
+    cb.checked = isEnabled();
+    cb.addEventListener('change', () => setEnabled(cb.checked));
   }
 
   // groups: [{ref, cmds: [...]}], pulse: {ref, p}|null
@@ -1339,7 +1400,7 @@ function initMindWare() {
   function vstr(v) { return 'v' + (v / 10).toFixed(1); }
 
   function applyChanges() {
-    const entries = allRefs().map(ref => ({ ref, diffs: computeDiffs(ref.applied, ref.draft) }));
+    const entries = allRefs().map(ref => ({ ref, diffs: computeDiffs(ref.applied, ref.draft, ref.kind === 'user') }));
     const pulse = state.pulse && refOf(state.pulse.sid) ? state.pulse : null;
     const custom = state.custom.trim();
     const memo = state.memo && state.memo.text.trim() && refOf(state.memo.sid) ? state.memo : null;
@@ -1426,7 +1487,7 @@ function initMindWare() {
   // (original = applied = draft) for the changed keys. No psyche hit, no command to
   // the bot — it's "this was always so", a correction of what sync mis-inferred.
   function commitCalibration() {
-    const entries = allRefs().map(ref => ({ ref, diffs: computeDiffs(ref.applied, ref.draft) }));
+    const entries = allRefs().map(ref => ({ ref, diffs: computeDiffs(ref.applied, ref.draft, ref.kind === 'user') }));
     const total = entries.reduce((s, e) => s + e.diffs.length, 0);
     if (!total) { flashApply(t('ui_nopending'), true); return; }
     entries.forEach(e => e.diffs.forEach(d => {
@@ -1457,12 +1518,13 @@ function initMindWare() {
     if (diffsC.length) groups.push({ ref: state, cmds: [`state reverts: ${diffsC.map(d => d.cmd).join('; ')}`] });
     (state.subjects || []).forEach(s => {
       const target = subs[s.id] || s.original;
-      const diffs = computeDiffs(s.applied, target);
+      const diffs = computeDiffs(s.applied, target, s.kind === 'user');
       if (diffs.length) groups.push({ ref: s, cmds: [`state reverts: ${diffs.map(d => d.cmd).join('; ')}`] });
     });
 
     restoreFromEntry(entry, true);
-    if (state.settings.psyche) state.psyche = Math.max(PSY_MIN, state.psyche - 3);
+    // rolling back to the original is a clean reset — restore pristine psyche
+    if (version === 10) allRefs().forEach(r => { r.psyche = 100; r.collapsed = false; });
     pushHistory([note]);
     if (groups.length) injectCommand(groups, null, '');
     state.pulse = null;
@@ -1476,11 +1538,11 @@ function initMindWare() {
   function resetSubject(sid) {
     const ref = refOf(sid);
     if (ref === state) { rollbackTo(10); return; }
-    const diffs = computeDiffs(ref.applied, ref.original);
+    const diffs = computeDiffs(ref.applied, ref.original, ref.kind === 'user');
     if (!diffs.length) { flashApply(t('ui_nopending'), true); return; }
     ref.applied = clone(ref.original);
     ref.draft = clone(ref.original);
-    if (state.settings.psyche) ref.psyche = Math.max(PSY_MIN, ref.psyche - 3);
+    ref.psyche = 100; ref.collapsed = false; // reset to original = pristine mind
     pushHistory([tf('hist_subreset', subjName(ref))]);
     injectCommand([{ ref, cmds: [`state reverts: ${diffs.map(d => d.cmd).join('; ')}`] }], null, '');
     updateStateInject();
@@ -1582,7 +1644,7 @@ function initMindWare() {
     const ref = refs[Math.floor(Math.random() * refs.length)];
     const to = clone(ref.applied);
     pickRandom(chaosPool(unlockedTabs()), 2).forEach(p => mutateSet(to, p));
-    const diffs = computeDiffs(ref.applied, to);
+    const diffs = computeDiffs(ref.applied, to, ref.kind === 'user');
     if (!diffs.length) return;
     if (state.settings.psyche) {
       const dmg = diffs.reduce((s, d) => s + d.dmg, 0) * (AWARE_MULT[ref.awareness] || 1);
@@ -1636,8 +1698,9 @@ function initMindWare() {
 
   function createUserSubject() {
     const base = defaults();
+    const av = user_avatar || 'default';
     const ref = {
-      id: 'user', kind: 'user', name: mac('{{user}}') || 'USER',
+      id: 'user_' + slugify(av), kind: 'user', name: mac('{{user}}') || 'USER', persona: av,
       original: clone(base), applied: clone(base), draft: clone(base),
       psyche: 100, collapsed: false, corruption: 0, awareness: 'full', stats: freshStats(),
     };
@@ -1734,7 +1797,7 @@ function initMindWare() {
     }
 
     const to = validateRemote(j, ref.applied);
-    const diffs = computeDiffs(ref.applied, to);
+    const diffs = computeDiffs(ref.applied, to, ref.kind === 'user');
     if (!diffs.length && !created && !unlocked) return;
 
     if (diffs.length) {
@@ -1897,11 +1960,19 @@ function initMindWare() {
       .catch(e => { console.warn('[MindWare] background char analysis failed', e); state.charBlind = true; save(); });
   }
 
+  // gate adding new subjects: hard cap of 5, a confirm past 3 (may cause errors)
+  function canAddSubject(then) {
+    const n = (state.subjects || []).length;
+    if (n >= 5) { flashApply(t('ui_subj_max'), true); return; }
+    if (n >= 3) { confirmDialog(t('ui_subj_warn'), then); return; }
+    then();
+  }
+
   async function addSelf() {
     const existing = findUserSubj();
-    if (existing) { state.selSubj = 'user'; renderApp(); return; }
+    if (existing) { state.selSubj = existing.id; renderApp(); return; }
     const ref = createUserSubject();
-    state.selSubj = 'user';
+    state.selSubj = ref.id;
     saveNow();
     const loader = showLoaderScreen(`${t('sy_target')}: ${ref.name}`, t('persona_lines'), true);
     try {
@@ -1914,6 +1985,8 @@ function initMindWare() {
   }
 
   async function scanScene() {
+    // make sure the user is linked too — scanning shouldn't leave them out
+    if (!findUserSubj() && (state.subjects || []).length < 5) createUserSubject();
     const loader = showLoaderScreen('…', t('scene_lines'), true);
     try {
       const raw = await generateRaw({
@@ -2216,7 +2289,9 @@ function initMindWare() {
   .mw-panel.mw-calibrating .mw-apply { background: linear-gradient(135deg, #2b8a9e, #14506a); border-color: #5fd0e0; color: #eafaff; }
   .mw-panel.mw-calibrating .mw-apply.mw-ready { box-shadow: 0 0 16px rgba(95,208,224,.5); }
 
-  .mw-sync-screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 24px; text-align: center; }
+  .mw-sync-screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 24px; text-align: center; position: relative; }
+  .mw-sync-close { position: absolute; top: 12px; right: 14px; background: none; border: none; color: #8f8f9b; font-size: 22px; cursor: pointer; padding: 4px 8px; line-height: 1; z-index: 2; }
+  .mw-sync-close:hover { color: #fff; }
   .mw-sync-logo { font-size: 44px; filter: drop-shadow(0 0 12px rgba(255,92,138,.6)); }
   .mw-sync-title { font-size: 19px; font-weight: 800; letter-spacing: 3px; color: #ff5c8a; }
   .mw-sync-sub { font-size: 12px; color: #8f8f9b; line-height: 1.5; max-width: 260px; }
@@ -2503,12 +2578,13 @@ function initMindWare() {
     }
   }
 
-  function confirmDialog(text, onYes) {
+  function confirmDialog(text, onYes, sub) {
     const m = D.createElement('div');
     m.className = 'mw-menu';
     m.innerHTML = `
       <div class="mw-menu-box">
         <div class="mw-note mw-warn">${esc(text)}</div>
+        ${sub ? `<div class="mw-note" style="font-size:9.5px;opacity:.75;margin-top:-2px">${esc(sub)}</div>` : ''}
         <button class="mw-btn mw-danger" id="mw-cf-yes">${t('ui_yes')}</button>
         <button class="mw-btn" id="mw-cf-no">${t('ui_no')}</button>
       </div>`;
@@ -2562,6 +2638,7 @@ function initMindWare() {
   function renderSyncScreen(err) {
     panel.innerHTML = `
       <div class="mw-sync-screen">
+        <button class="mw-sync-close" id="mw-sync-close" title="${esc(t('ui_close'))}">✕</button>
         <div class="mw-sync-logo">🧠</div>
         <div class="mw-sync-title">MIND<span style="color:#ececf2">WARE</span></div>
         <div class="mw-sync-sub">${t('sy_sub')}</div>
@@ -2575,6 +2652,7 @@ function initMindWare() {
     panel.querySelector('#mw-sync').addEventListener('click', runSync);
     panel.querySelector('#mw-sync-self').addEventListener('click', () => { initBlindChar(); addSelf(); });
     panel.querySelector('#mw-sync-npc').addEventListener('click', () => { initBlindChar(); scanScene(); });
+    panel.querySelector('#mw-sync-close').addEventListener('click', togglePanel);
   }
 
   /* ================= UI: MAIN APP ================= */
@@ -2638,8 +2716,11 @@ function initMindWare() {
       const active = state.selSubj === sid ? 'mw-on' : '';
       let inner;
       if (ref === state && avatarSrc) inner = `<img src="${esc(avatarSrc)}" onerror="this.remove()">`;
-      else if (ref !== state && ref.kind === 'user') inner = personaSrc ? `<img src="${esc(personaSrc)}" onerror="this.replaceWith(document.createTextNode('👤'))">` : '👤';
-      else inner = esc((subjName(ref) || '?')[0].toUpperCase());
+      else if (ref !== state && ref.kind === 'user') {
+        let src = personaSrc; // legacy user subject with no persona → current persona
+        if (ref.persona) { try { src = getContext().getThumbnailUrl('persona', ref.persona); } catch (e) { src = personaSrc; } }
+        inner = src ? `<img src="${esc(src)}" onerror="this.replaceWith(document.createTextNode('👤'))">` : '👤';
+      } else inner = esc((subjName(ref) || '?')[0].toUpperCase());
       return `<div class="mw-subj ${active}" data-sid="${esc(sid)}" title="${esc(subjName(ref))}">${inner}</div>`;
     }).join('');
     const cur = subj();
@@ -2657,19 +2738,18 @@ function initMindWare() {
   }
 
   function showSubjMenu() {
-    const hasUser = !!findUserSubj();
     const m = D.createElement('div');
     m.className = 'mw-menu';
     m.innerHTML = `
       <div class="mw-menu-box">
         <div class="mw-card-title">${t('ui_addsubj')}</div>
-        ${hasUser ? '' : `<button class="mw-btn" id="mw-add-self">${t('ui_add_self')} (${esc(mac('{{user}}'))})</button>`}
+        <button class="mw-btn" id="mw-add-self">${t('ui_add_self')} (${esc(mac('{{user}}'))})</button>
         <button class="mw-btn" id="mw-add-scan">${t('ui_scan_scene')}</button>
         <button class="mw-btn mw-danger" id="mw-add-cancel">${t('ui_cancel')}</button>
       </div>`;
     panel.appendChild(m);
     const self = m.querySelector('#mw-add-self');
-    if (self) self.addEventListener('click', () => { m.remove(); addSelf(); });
+    if (self) self.addEventListener('click', () => { m.remove(); canAddSubject(addSelf); });
     m.querySelector('#mw-add-scan').addEventListener('click', () => { m.remove(); scanScene(); });
     m.querySelector('#mw-add-cancel').addEventListener('click', () => m.remove());
   }
@@ -2677,6 +2757,7 @@ function initMindWare() {
   function renderScenePick(names) {
     panel.innerHTML = `
       <div class="mw-sync-screen">
+        <button class="mw-sync-close" id="mw-sync-close" title="${esc(t('ui_close'))}">✕</button>
         <div class="mw-sync-logo">🧠</div>
         <div class="mw-sync-title">${t('ui_scene_pick')}</div>
         ${names.length
@@ -2685,8 +2766,9 @@ function initMindWare() {
         <button class="mw-btn mw-danger" id="mw-scene-back">${t('ui_back')}</button>
       </div>`;
     panel.querySelectorAll('.mw-btn[data-i]').forEach(b =>
-      b.addEventListener('click', () => addNpc(names[Number(b.dataset.i)])));
+      b.addEventListener('click', () => canAddSubject(() => addNpc(names[Number(b.dataset.i)]))));
     panel.querySelector('#mw-scene-back').addEventListener('click', renderApp);
+    panel.querySelector('#mw-sync-close').addEventListener('click', togglePanel);
   }
 
   function renderNav() {
@@ -3278,7 +3360,7 @@ function initMindWare() {
         confirmDialog(t('ui_sure_x'), () => {
           state.settings.extreme = true;
           saveNow(); renderApp(); flashApply(t('ui_xunlocked'));
-        });
+        }, t('ui_18plus'));
       }
     });
 
@@ -3292,7 +3374,7 @@ function initMindWare() {
         confirmDialog(t('ui_sure_b'), () => {
           state.settings.biolab = true;
           saveNow(); renderApp(); flashApply(t('ui_bunlocked'));
-        });
+        }, t('ui_18plus'));
       }
     });
 
@@ -3530,6 +3612,10 @@ function initMindWare() {
       startWatchdog();
       window.addEventListener('unload', cleanup);
       window.addEventListener('pagehide', cleanup);
+
+      addSettingsUi();
+      setTimeout(addSettingsUi, 1500); // extensions drawer may not be ready yet
+      applyEnabled();
 
       console.info('[MindWare] v1.0 neural link ready');
     } catch (e) {
