@@ -1,0 +1,12 @@
+{
+    "display_name": "MindWare",
+    "loading_order": 102,
+    "requires": [],
+    "optional": [],
+    "js": "index.js",
+    "css": "style.css",
+    "author": "Yumi4ka",
+    "version": "1.0.0",
+    "homePage": "",
+    "auto_update": false
+}
