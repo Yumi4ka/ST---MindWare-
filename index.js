@@ -72,10 +72,22 @@ function getCharData() {
         scenario: c.scenario, first_mes: c.first_mes,
     };
 }
-function getCharAvatarPath() {
+function getCharAvatarPath(avatar) {
     const ctx = getContext();
-    const c = ctx.characters?.[ctx.characterId];
-    return c ? `/thumbnail?type=avatar&file=${encodeURIComponent(c.avatar)}` : null;
+    const file = avatar || ctx.characters?.[ctx.characterId]?.avatar;
+    return file ? `/thumbnail?type=avatar&file=${encodeURIComponent(file)}` : null;
+}
+// in a GROUP chat, the member characters (else null) — lets the user pick whom to link
+function getGroupMemberChars() {
+    const ctx = getContext();
+    if (!ctx.groupId) return null;
+    const g = (ctx.groups || []).find(x => String(x.id) === String(ctx.groupId));
+    if (!g || !Array.isArray(g.members)) return null;
+    const chars = ctx.characters || [];
+    return g.members
+        .map(av => chars.find(c => c.avatar === av))
+        .filter(Boolean)
+        .map(c => ({ name: c.name, avatar: c.avatar, description: c.description, personality: c.personality, scenario: c.scenario, first_mes: c.first_mes }));
 }
 // the active persona's avatar — used for the user subject chip
 function getPersonaAvatarPath() {
@@ -334,11 +346,11 @@ function initMindWare() {
     'Feral': { intelligence: 15, aggression: 85, courage: 90, talkativeness: 10, shyness: 0, emotionality: 80, speech_pattern: 'Rude' },
   };
   const BODY_PRESETS = {
-    'Petite': { height: 148, weight: 42, bust: 1, hips: 30, strength: 15, voice_pitch: 78, body_type: 'Petite' },
-    'Amazon': { height: 192, weight: 85, bust: 4, hips: 55, strength: 90, voice_pitch: 25, body_type: 'Muscular' },
-    'Athlete': { strength: 75, flexibility: 80, weight: 56, bust: 2, body_type: 'Athletic' },
-    'Gyaru': { skin_tone: 'Tanned', hair_color: 'Blonde', hair_length: 85, bust: 4, hips: 65, body_type: 'Curvy', accessories: ['Earrings'] },
-    'E-girl': { hair_color: 'Multicolored', hair_style: 'Twintails', skin_tone: 'Fair', eye_color: 'Gray', bust: 2, outfit: 'E-girl', piercings: ['Ears', 'Nose'], accessories: ['Choker'] },
+    'Petite': { gender: 'Female', breasts: 2, members: 0, height: 148, weight: 42, bust: 1, hips: 30, strength: 15, voice_pitch: 78, body_type: 'Petite' },
+    'Amazon': { gender: 'Female', breasts: 2, members: 0, height: 192, weight: 85, bust: 4, hips: 55, strength: 90, voice_pitch: 25, body_type: 'Muscular' },
+    'Athlete': { gender: 'Female', breasts: 2, members: 0, strength: 75, flexibility: 80, weight: 56, bust: 2, body_type: 'Athletic' },
+    'Gyaru': { gender: 'Female', breasts: 2, members: 0, skin_tone: 'Tanned', hair_color: 'Blonde', hair_length: 85, bust: 4, hips: 65, body_type: 'Curvy', accessories: ['Earrings'] },
+    'E-girl': { gender: 'Female', breasts: 2, members: 0, hair_color: 'Multicolored', hair_style: 'Twintails', skin_tone: 'Fair', eye_color: 'Gray', bust: 2, outfit: 'E-girl', piercings: ['Ears', 'Nose'], accessories: ['Choker'] },
     'Twink': { gender: 'Male', height: 170, weight: 56, strength: 28, bust: 0, breasts: 0, members: 1, body_type: 'Slim', voice_pitch: 48 },
     'Jock': { gender: 'Male', height: 184, weight: 84, strength: 85, bust: 0, breasts: 0, members: 1, body_type: 'Muscular', voice_pitch: 28 },
     'Bear': { gender: 'Male', height: 188, weight: 102, strength: 80, bust: 0, breasts: 0, members: 1, body_type: 'Plush', hairiness: 80, voice_pitch: 18 },
@@ -403,7 +415,8 @@ function initMindWare() {
       ro_Dominant: 'Dominant', ro_Equal: 'Equal', ro_Submissive: 'Submissive', ro_Servant: 'Servant',
       es_Low: 'Low', es_Unstable: 'Unstable', es_High: 'High',
       ki_Unaware: 'Unaware', ki_Curious: 'Curious', ki_Needy: 'Needy', ki_Addicted: 'Addicted',
-      p_talkativeness: 'Talkativeness', p_affection: 'Attitude ({{user}})', p_affection_user: 'Attitude ({{char}})', p_courage: 'Courage',
+      p_talkativeness: 'Talkativeness', p_affection: 'Attitude ({{user}})', p_affection_base: 'Attitude', p_courage: 'Courage',
+      ui_afftarget: 'Attitude toward',
       p_libido: 'Libido', p_sensitivity: 'Sensitivity', p_arousal: 'Constant Arousal',
       p_sadism: 'Sadism', p_masochism: 'Masochism', p_lewd_speech: 'Lewd Speech', p_fertility: 'Fertility',
       p_arms: 'Arms', p_legs: 'Legs', p_eyes: 'Eyes', p_breasts: 'Breasts', p_members: 'Penises',
@@ -545,7 +558,7 @@ function initMindWare() {
       sy_btn: 'SYNC CHARACTER', sy_err: 'ANALYSIS FAILED. Check API connection and retry.',
       sy_nochar: 'NO CHARACTER LINKED. Open a character chat first.',
       sy_target: 'TARGET', sy_done: 'LINK ESTABLISHED',
-      sy_npc: 'NPC from the scene',
+      sy_npc: 'NPC from the scene', sy_group: 'Group scene — choose a character to link:',
       boot_lines: ['establishing neural link…', 'handshake: accepted', 'loading cortical map…', 'link integrity: 98.7%'],
       scan_lines: ['parsing identity matrix…', 'mapping body schema…', 'indexing memories…', 'calibrating psyche baseline…', 'compiling parameter set…'],
       scene_lines: ['scanning the scene…', 'counting heartbeats…', 'isolating neural signatures…'],
@@ -571,7 +584,8 @@ function initMindWare() {
       p_pain_threshold: 'Порог боли', p_regeneration: 'Регенерация', p_perception: 'Восприятие', p_hairiness: 'Волосатость',
       p_submission: 'Покорность', p_dominance: 'Доминация', p_intelligence: 'Интеллект',
       p_shyness: 'Стыдливость', p_aggression: 'Агрессивность', p_emotionality: 'Эмоциональность', p_empathy: 'Эмпатия',
-      p_talkativeness: 'Разговорчивость', p_affection: 'Отношение ({{user}})', p_affection_user: 'Отношение ({{char}})', p_courage: 'Смелость',
+      p_talkativeness: 'Разговорчивость', p_affection: 'Отношение ({{user}})', p_affection_base: 'Отношение', p_courage: 'Смелость',
+      ui_afftarget: 'Отношение к',
       p_libido: 'Либидо', p_sensitivity: 'Чувствительность', p_arousal: 'Пост. возбуждение',
       p_sadism: 'Садизм', p_masochism: 'Мазохизм', p_lewd_speech: 'Непристойность речи', p_fertility: 'Фертильность',
       p_arms: 'Руки', p_legs: 'Ноги', p_eyes: 'Глаза', p_breasts: 'Груди', p_members: 'Члены',
@@ -697,7 +711,7 @@ function initMindWare() {
       sy_btn: 'СИНХРОНИЗАЦИЯ ПЕРСОНАЖА', sy_err: 'АНАЛИЗ НЕ УДАЛСЯ. Проверь подключение к API и повтори.',
       sy_nochar: 'СУБЪЕКТ НЕ НАЙДЕН. Сначала открой чат с персонажем.',
       sy_target: 'ЦЕЛЬ', sy_done: 'СВЯЗЬ УСТАНОВЛЕНА',
-      sy_npc: 'NPC из сцены',
+      sy_npc: 'NPC из сцены', sy_group: 'Групповая сцена — выбери персонажа для привязки:',
       boot_lines: ['установка нейросвязи…', 'рукопожатие: принято', 'загрузка кортикальной карты…', 'целостность связи: 98.7%'],
       scan_lines: ['разбор матрицы личности…', 'построение схемы тела…', 'индексация памяти…', 'калибровка базовой психики…', 'компиляция параметров…'],
       scene_lines: ['сканирование сцены…', 'подсчёт сердцебиений…', 'выделение нейросигнатур…'],
@@ -822,8 +836,8 @@ function initMindWare() {
   }
   function pLabel(key) {
     if (KINK_KEY2NAME[key]) return mac(t('k_' + KINK_KEY2NAME[key]));
-    // a user subject's "attitude" is toward the character, not toward themselves
-    if (key === 'affection' && subj().kind === 'user') return mac(t('p_affection_user'));
+    // "attitude" is shown toward the chosen target (default: char→user, user→char)
+    if (key === 'affection') return mac(t('p_affection_base')) + ' (' + affTargetName(subj()) + ')';
     return mac(t('p_' + key));
   }
   // English label for the AI command (kink keys map to their kink name)
@@ -893,8 +907,28 @@ function initMindWare() {
   function allRefs() { return [state].concat(state.subjects || []); }
   function sidOf(ref) { return ref === state ? 'char' : ref.id; }
   function refOf(sid) { return sid === 'char' ? state : ((state.subjects || []).find(s => s.id === sid) || state); }
-  function subjMacro(ref) { return ref === state ? '{{char}}' : ref.name; }
+  // use the literal synced name (not {{char}}/{{user}}) — robust in GROUP chats
+  // where {{char}} resolves to the current speaker, not our target subject
+  function subjMacro(ref) { return ref === state ? (state.charName || '{{char}}') : ref.name; }
   function subjName(ref) { return ref === state ? (state.charName || 'CHAR') : ref.name; }
+
+  // whom a subject's "attitude" points at (token: 'user' | 'char' | subjectId)
+  function affTargetTok(ref) {
+    if (ref.affTarget) return ref.affTarget;
+    return (ref !== state && ref.kind === 'user') ? 'char' : 'user';
+  }
+  function affTargetMacro(ref) {
+    const tok = affTargetTok(ref);
+    if (tok === 'user') return '{{user}}';
+    if (tok === 'char') return state.charName || '{{char}}';
+    const r = refOf(tok); return (r && r !== state) ? r.name : (state.charName || '{{char}}');
+  }
+  function affTargetName(ref) {
+    const tok = affTargetTok(ref);
+    if (tok === 'user') return mac('{{user}}') || 'user';
+    if (tok === 'char') return subjName(state);
+    const r = refOf(tok); return r ? subjName(r) : subjName(state);
+  }
   function subj() { return refOf(state.selSubj); }
   function isEditable(ref) { return ref === state || ref.kind === 'npc' || state.settings.selfEdit; }
   // the user subject tied to the CURRENTLY active persona (legacy ones with no
@@ -1040,13 +1074,13 @@ function initMindWare() {
   /* ================= DIFF / DAMAGE ================= */
 
   // → list of {key, note (localized UI), cmd (English for AI), dmg}
-  // isUser: the diff belongs to a user subject (affection points at {{char}}, not {{user}})
-  function computeDiffs(from, to, isUser) {
+  // affMacro: who this subject's affection points at (a macro/name string)
+  function computeDiffs(from, to, affMacro) {
     const out = [];
     SLIDERS.forEach(([, key, min, max, , w]) => {
       const a = from[key], b = to[key];
       if (a !== b && b !== undefined) {
-        const enL = (key === 'affection' && isUser) ? 'Attitude (toward {{char}})' : enLabel(key);
+        const enL = (key === 'affection' && affMacro) ? `Attitude (toward ${affMacro})` : enLabel(key);
         out.push({
           key,
           note: `${pLabel(key)}: ${fmtVal(key, b)} (${t('d_was')} ${fmtVal(key, a)})`,
@@ -1155,7 +1189,7 @@ function initMindWare() {
     const sections = [];
     let anyActive = false;
     allRefs().forEach(ref => {
-      const diffs = computeDiffs(ref.original, ref.applied, ref.kind === 'user');
+      const diffs = computeDiffs(ref.original, ref.applied, affTargetMacro(ref));
       const active = diffs.length || (state.settings.psyche && ref.psyche < 100);
       if (ref !== state && !active) return;
       if (active) anyActive = true;
@@ -1205,11 +1239,11 @@ function initMindWare() {
       const unlockNote = state.settings.botUnlock
         ? ' You may also open hidden firmware branches when the story truly demands it by adding "unlock":"extreme" or "unlock":"bio" to the directive (this reveals additional parameters).'
         : '';
-      lines.push(`Remote access is enabled: the device may also be operated from within the story (by itself, by characters, or by events). To change parameters narratively, append at the VERY END of your reply, on its own line: <!--mw {"param":value,...}--> (invisible to the user). Add "target":<name> to aim at someone other than {{char}}; valid targets: ${targets.join(', ')}. Valid params: ${remoteKeys().join(',')}. Numbers are 0-100 unless stated (height cm, weight kg max 100, hair_length cm, apparent_age years, affection -100=hatred..100=love, arms/legs/eyes/breasts/members are counts); bust is a cup "AA"-"H"; toggles are booleans; selects use their English option names; array params take arrays of their English item names.${unlockNote} Use it only when the story justifies it.`);
+      lines.push(`Remote access is enabled: the device may also be operated from within the story (by itself, by characters, or by events). To change parameters narratively, append at the VERY END of your reply, on its own line: <!--mw {"param":value,...}--> (invisible to the user). Add "target":<name> to aim at someone other than {{char}}; valid targets: ${targets.join(', ')}. Valid params: ${remoteKeys().join(',')}. Numbers are 0-100 unless stated (height cm, weight kg max 100, hair_length cm, apparent_age years, affection -100=hatred..100=love, arms/legs/eyes/breasts/members are counts); bust is a cup "AA"-"H"; toggles are booleans; selects use their English option names; array params take arrays of their English item names. You may also apply a whole preset at once with "preset":"Name" (any explicit params override it); available presets: ${Object.keys(MIND_PRESETS).concat(Object.keys(BODY_PRESETS)).join(', ')}. One-shot effects you may trigger in the same directive: "pulse":"<emotion>" floods them with a sudden artificial emotion (one of: ${PULSES.concat(state.settings.extreme ? PULSES_X : []).join(', ')}); "memory":"<text>" implants a false memory that feels entirely real to them; "pregnant":true makes them pregnant on the spot; "awareness":"full"|"feels"|"rewrite" sets how they experience changes (full = consciously aware; feels = senses them but not the cause; rewrite = it has always been so, nobody notices); "reset":true wipes ALL modifications and restores their original self.${unlockNote} Use it only when the story justifies it.`);
     }
-    lines.push(`These modifications are ABSOLUTE and already in effect: they override the character card wherever they conflict, and they are NOT optional or contingent on the plot. Even if nothing in the story explains them, treat them as established physical and mental reality and reflect them in ${state.charName ? '{{char}}' : 'the subject'}'s body, behaviour and speech in EVERY reply — never ignore, downplay, postpone, or wait for narrative justification.`);
+    lines.push(`These modifications are ABSOLUTE and already in effect: they override the character card wherever they conflict, and they are NOT optional or contingent on the plot. Even if nothing in the story explains them, treat them as established physical and mental reality and reflect them in the named subject's body, behaviour and speech in EVERY reply — never ignore, downplay, postpone, or wait for narrative justification. Give the physical, appearance and personality changes the SAME weight as any intimate ones; do NOT focus only on the sexual parameters while neglecting the rest. Each subject above is named explicitly — apply each change strictly to that named character, even in a group scene with several characters present.`);
     if (state.settings.thoughts) {
-      lines.push(`After your reply, append on its very own final line {{char}}'s honest private inner monologue right now, in first person, 1-2 sentences reflecting their modified state and true feelings, formatted EXACTLY as: <!--mw-think {{char}}: ...--> (an HTML comment, invisible to the reader). Always include it.`);
+      lines.push(`After your reply, append on its very own final line the focal character's honest private inner monologue right now, in first person, 1-2 sentences reflecting their modified state and true feelings, formatted EXACTLY as: <!--mw-think ${subjMacro(state)}: ...--> (an HTML comment, invisible to the reader). Always include it.`);
     }
     if (state.settings.corruption) {
       lines.push(`Whenever your reply depicts an explicit sexual act, append one empty marker <!--mw-act--> at the very end for EACH distinct act (HTML comments, invisible to the reader). Do not mention or explain them.`);
@@ -1400,7 +1434,7 @@ function initMindWare() {
   function vstr(v) { return 'v' + (v / 10).toFixed(1); }
 
   function applyChanges() {
-    const entries = allRefs().map(ref => ({ ref, diffs: computeDiffs(ref.applied, ref.draft, ref.kind === 'user') }));
+    const entries = allRefs().map(ref => ({ ref, diffs: computeDiffs(ref.applied, ref.draft, affTargetMacro(ref)) }));
     const pulse = state.pulse && refOf(state.pulse.sid) ? state.pulse : null;
     const custom = state.custom.trim();
     const memo = state.memo && state.memo.text.trim() && refOf(state.memo.sid) ? state.memo : null;
@@ -1487,7 +1521,7 @@ function initMindWare() {
   // (original = applied = draft) for the changed keys. No psyche hit, no command to
   // the bot — it's "this was always so", a correction of what sync mis-inferred.
   function commitCalibration() {
-    const entries = allRefs().map(ref => ({ ref, diffs: computeDiffs(ref.applied, ref.draft, ref.kind === 'user') }));
+    const entries = allRefs().map(ref => ({ ref, diffs: computeDiffs(ref.applied, ref.draft, affTargetMacro(ref)) }));
     const total = entries.reduce((s, e) => s + e.diffs.length, 0);
     if (!total) { flashApply(t('ui_nopending'), true); return; }
     entries.forEach(e => e.diffs.forEach(d => {
@@ -1518,7 +1552,7 @@ function initMindWare() {
     if (diffsC.length) groups.push({ ref: state, cmds: [`state reverts: ${diffsC.map(d => d.cmd).join('; ')}`] });
     (state.subjects || []).forEach(s => {
       const target = subs[s.id] || s.original;
-      const diffs = computeDiffs(s.applied, target, s.kind === 'user');
+      const diffs = computeDiffs(s.applied, target, affTargetMacro(s));
       if (diffs.length) groups.push({ ref: s, cmds: [`state reverts: ${diffs.map(d => d.cmd).join('; ')}`] });
     });
 
@@ -1538,7 +1572,7 @@ function initMindWare() {
   function resetSubject(sid) {
     const ref = refOf(sid);
     if (ref === state) { rollbackTo(10); return; }
-    const diffs = computeDiffs(ref.applied, ref.original, ref.kind === 'user');
+    const diffs = computeDiffs(ref.applied, ref.original, affTargetMacro(ref));
     if (!diffs.length) { flashApply(t('ui_nopending'), true); return; }
     ref.applied = clone(ref.original);
     ref.draft = clone(ref.original);
@@ -1644,7 +1678,7 @@ function initMindWare() {
     const ref = refs[Math.floor(Math.random() * refs.length)];
     const to = clone(ref.applied);
     pickRandom(chaosPool(unlockedTabs()), 2).forEach(p => mutateSet(to, p));
-    const diffs = computeDiffs(ref.applied, to, ref.kind === 'user');
+    const diffs = computeDiffs(ref.applied, to, affTargetMacro(ref));
     if (!diffs.length) return;
     if (state.settings.psyche) {
       const dmg = diffs.reduce((s, d) => s + d.dmg, 0) * (AWARE_MULT[ref.awareness] || 1);
@@ -1796,10 +1830,57 @@ function initMindWare() {
       ref = hit;
     }
 
-    const to = validateRemote(j, ref.applied);
-    const diffs = computeDiffs(ref.applied, to, ref.kind === 'user');
-    if (!diffs.length && !created && !unlocked) return;
+    // "preset":"Name" expands into its params (explicit params still override it)
+    if (j.preset) {
+      const want = String(j.preset).toLowerCase();
+      const key = Object.keys(MIND_PRESETS).concat(Object.keys(BODY_PRESETS)).find(n => n.toLowerCase() === want);
+      const p = key ? (MIND_PRESETS[key] || BODY_PRESETS[key]) : null;
+      if (p) Object.entries(p).forEach(([k, v]) => { if (j[k] === undefined) j[k] = clone(v); });
+      delete j.preset;
+    }
 
+    // one-shot story effects the bot can trigger (not parameter sets)
+    let botPulse = null, botMeta = false;
+    const botCmds = [], botNotes = [];
+    if (j.awareness) {
+      const aw = String(j.awareness).toLowerCase().trim();
+      if (AWARE_MODES.includes(aw) && ref.awareness !== aw) { ref.awareness = aw; botMeta = true; botNotes.push(t('s_awareness') + ': ' + t('aw_' + aw)); }
+    }
+    if (j.reset === true) {
+      const rev = computeDiffs(ref.applied, ref.original, affTargetMacro(ref));
+      ref.applied = clone(ref.original); ref.draft = clone(ref.original);
+      ref.psyche = 100; ref.collapsed = false; ref.corruption = 0;
+      botMeta = true;
+      if (rev.length) botCmds.push(`every modification is wiped — ${subjMacro(ref)} reverts entirely to their original self: ${rev.map(d => d.cmd).join('; ')}`);
+      botNotes.push(t('hist_rb_orig'));
+    }
+    if (j.pulse) {
+      const vp = PULSES.concat(state.settings.extreme ? PULSES_X : []).find(p => p.toLowerCase() === String(j.pulse).toLowerCase().trim());
+      if (vp) {
+        botPulse = { ref, p: vp };
+        if (state.settings.psyche) ref.psyche = Math.max(PSY_MIN, ref.psyche - (vp === 'Climax' ? 4 : 2));
+        if (vp === 'Climax' && ref.stats) ref.stats.forced += 1;
+        botNotes.push(t('d_pulse') + ': ' + t('pu_' + vp));
+      }
+    }
+    if (j.memory && String(j.memory).trim()) {
+      botCmds.push(`a fabricated memory is implanted into ${subjMacro(ref)}'s mind and feels entirely real and their own: "${String(j.memory).trim()}"`);
+      botNotes.push(t('d_memimplant'));
+      if (state.settings.psyche) ref.psyche = Math.max(PSY_MIN, ref.psyche - Math.round(6 * (AWARE_MULT[ref.awareness] || 1)));
+    }
+    if (j.pregnant === true) {
+      botCmds.push(`${subjMacro(ref)} becomes pregnant THIS INSTANT — no conception involved, the belly will visibly grow; SECRET, never state outright: the womb is filling with EGGS, hide it behind subtle oddities and reveal only at a very late stage`);
+      botNotes.push(t('d_instapreg'));
+      if (state.settings.psyche) ref.psyche = Math.max(PSY_MIN, ref.psyche - Math.round(10 * (AWARE_MULT[ref.awareness] || 1)));
+    }
+    ['pulse', 'memory', 'pregnant', 'awareness', 'reset'].forEach(k => delete j[k]);
+
+    const to = validateRemote(j, ref.applied);
+    const diffs = computeDiffs(ref.applied, to, affTargetMacro(ref));
+    if (!diffs.length && !created && !unlocked && !botPulse && !botCmds.length && !botMeta) return;
+
+    const prefix = ref === state ? '' : subjName(ref) + ': ';
+    const notes = [];
     if (diffs.length) {
       if (state.settings.psyche) {
         const dmg = Math.min(100, Math.round(diffs.reduce((s, d) => s + d.dmg, 0) * (AWARE_MULT[ref.awareness] || 1)));
@@ -1810,10 +1891,11 @@ function initMindWare() {
         else ref.draft[d.key] = to[d.key];
       });
       ref.applied = to;
-      const prefix = ref === state ? '' : subjName(ref) + ': ';
-      pushHistory([t('ui_remote')].concat(diffs.map(d => prefix + d.note)));
-      checkCollapse(ref);
+      notes.push(...diffs.map(d => prefix + d.note));
     }
+    if (botPulse || botCmds.length) injectCommand(botCmds.length ? [{ ref, cmds: botCmds }] : [], botPulse, '');
+    if (botPulse || botCmds.length || botMeta) notes.push(...botNotes.map(n => prefix + n));
+    if (notes.length || created || unlocked) { pushHistory([t('ui_remote')].concat(notes)); checkCollapse(ref); }
     updateStateInject();
     saveNow();
     if (created) showUserAlert(ref);
@@ -1888,8 +1970,8 @@ function initMindWare() {
     return o;
   }
 
-  async function runSync() {
-    const cd = (() => { try { return getCharData('current'); } catch (e) { return null; } })();
+  async function runSync(cd) {
+    if (!cd) cd = (() => { try { return getCharData('current'); } catch (e) { return null; } })();
     if (!cd) { renderSyncScreen(t('sy_nochar')); return; }
     const scan = showLoaderScreen(`${t('sy_target')}: ${cd.name}`, t('scan_lines'), true);
     try {
@@ -1903,6 +1985,7 @@ function initMindWare() {
       state.synced = true;
       state.charBlind = false;
       state.charName = cd.name || 'UNKNOWN';
+      state.charAvatar = cd.avatar || null;
       state.original = base;
       state.applied = clone(base);
       state.draft = clone(base);
@@ -2002,6 +2085,9 @@ function initMindWare() {
       const a = txt.indexOf('['), b = txt.lastIndexOf(']');
       let names = [];
       if (a >= 0 && b > a) names = JSON.parse(txt.slice(a, b + 1));
+      // in a group chat, the actual member characters are the most reliable candidates
+      const groupNames = (getGroupMemberChars() || []).map(m => m.name);
+      names = groupNames.concat(Array.isArray(names) ? names : []);
       const userName = (mac('{{user}}') || '').toLowerCase();
       names = names.filter(n => typeof n === 'string' && n.trim())
         .map(n => n.trim())
@@ -2636,6 +2722,23 @@ function initMindWare() {
   }
 
   function renderSyncScreen(err) {
+    // GROUP chat: pick which character to link as the main subject — no auto-connect
+    const members = getGroupMemberChars();
+    if (members && members.length) {
+      panel.innerHTML = `
+        <div class="mw-sync-screen">
+          <button class="mw-sync-close" id="mw-sync-close" title="${esc(t('ui_close'))}">✕</button>
+          <div class="mw-sync-logo">🧠</div>
+          <div class="mw-sync-title">MIND<span style="color:#ececf2">WARE</span></div>
+          <div class="mw-sync-sub">${t('sy_group')}</div>
+          ${members.map((m, i) => `<button class="mw-btn" data-ci="${i}" style="min-width:220px">${esc(m.name)}</button>`).join('')}
+          <div class="mw-sync-err">${esc(err || '')}</div>
+        </div>`;
+      panel.querySelectorAll('.mw-btn[data-ci]').forEach(b =>
+        b.addEventListener('click', () => runSync(members[Number(b.dataset.ci)])));
+      panel.querySelector('#mw-sync-close').addEventListener('click', togglePanel);
+      return;
+    }
     panel.innerHTML = `
       <div class="mw-sync-screen">
         <button class="mw-sync-close" id="mw-sync-close" title="${esc(t('ui_close'))}">✕</button>
@@ -2649,7 +2752,7 @@ function initMindWare() {
         </div>
         <div class="mw-sync-err">${esc(err || '')}</div>
       </div>`;
-    panel.querySelector('#mw-sync').addEventListener('click', runSync);
+    panel.querySelector('#mw-sync').addEventListener('click', () => runSync());
     panel.querySelector('#mw-sync-self').addEventListener('click', () => { initBlindChar(); addSelf(); });
     panel.querySelector('#mw-sync-npc').addEventListener('click', () => { initBlindChar(); scanScene(); });
     panel.querySelector('#mw-sync-close').addEventListener('click', togglePanel);
@@ -2709,7 +2812,7 @@ function initMindWare() {
     const bar = panel.querySelector('#mw-subjbar');
     if (!bar) return;
     let avatarSrc = null, personaSrc = null;
-    try { avatarSrc = getCharAvatarPath('current'); } catch (e) { /* ignore */ }
+    try { avatarSrc = getCharAvatarPath(state.charAvatar); } catch (e) { /* ignore */ }
     try { personaSrc = getPersonaAvatarPath(); } catch (e) { /* ignore */ }
     const chips = allRefs().map(ref => {
       const sid = sidOf(ref);
@@ -2858,6 +2961,19 @@ function initMindWare() {
     return `<div class="mw-toggle ${subj().draft[key] ? 'mw-on' : ''}" data-key="${key}">${esc(pLabel(key))}</div>`;
   }
 
+  // dropdown to pick whom the current subject's "attitude" is directed at
+  function affTargetSelect() {
+    const cur = subj();
+    const opts = [['user', mac('{{user}}') || 'user']];
+    if (cur !== state) opts.push(['char', subjName(state)]);
+    allRefs().forEach(r => { if (r !== cur && r !== state) opts.push([sidOf(r), subjName(r)]); });
+    const val = affTargetTok(cur);
+    return `<div class="mw-select-row"><label>${t('ui_afftarget')}</label>
+      <select class="mw-select" id="mw-afftarget">
+        ${opts.map(([tok, nm]) => `<option value="${esc(tok)}" ${val === tok ? 'selected' : ''}>${esc(nm)}</option>`).join('')}
+      </select></div>`;
+  }
+
   // sort a flat option list by its localized label, pinning neutral firsts.
   // Lists with a meaningful order (depth/speed/tiers) opt out via SORT_SKIP.
   const SORT_PIN = ['None', 'Default', 'Original', 'Normal', 'Human'];
@@ -2962,7 +3078,7 @@ function initMindWare() {
         sliderRow(sliderDef('self_esteem')) +
         grp('g_will', ['dominance', 'submission', 'aggression']) +
         `<div class="mw-grp">${t('g_attitude')}</div>` +
-        sliderRow(sliderDef('affection')) +
+        sliderRow(sliderDef('affection')) + affTargetSelect() +
         sliderRow(sliderDef('user_dependency')) +
         sliderRow(sliderDef('perception_filter')) +
         sliderRow(sliderDef('role_position'))),
@@ -3285,6 +3401,12 @@ function initMindWare() {
       const lbl = c.querySelector('#mw-corr-val');
       if (lbl) lbl.textContent = corr.value + '%';
       saveNow(); updateStateInject();
+    });
+
+    const aft = c.querySelector('#mw-afftarget');
+    if (aft) aft.addEventListener('change', () => {
+      subj().affTarget = aft.value;
+      saveNow(); updateStateInject(); renderTab();
     });
 
     c.querySelectorAll('.mw-preset').forEach(el => {

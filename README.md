@@ -1,92 +1,98 @@
 # 🧠 MindWare
 
-**A "reality console" companion for SillyTavern — reshape a character's body and mind on the fly, right inside your roleplay.**
+**«Консоль реальности» для SillyTavern — меняй тело и разум персонажа на лету, прямо внутри ролевой игры.**
 
-MindWare lives as a small floating bubble in your chat. Tap it to open a sleek phone‑style panel that lets you edit who a character *is* — their appearance, physique, personality, mood, relationships, and more — and have those changes flow straight into the story. To the AI, the device isn't an in‑world gadget: it quietly **edits reality itself**, so every change is treated as an established fact of the scene and is reflected in every reply.
+MindWare живёт в чате маленьким плавающим пузырём. Нажми на него — откроется аккуратная панель в стиле телефонного приложения, где можно редактировать то, *кем является* персонаж: внешность, телосложение, характер, настроение, отношения и многое другое. Изменения сразу попадают в историю. Для модели устройство — не предмет внутри мира: оно тихо **переписывает саму реальность**, поэтому каждое изменение считается установленным фактом сцены и отыгрывается в каждом ответе.
 
-> ⚠️ **Mature content.** MindWare is built for adult roleplay. The everyday controls are perfectly tame, but additional **18+ modules are tucked behind an optional unlock** and stay completely hidden until you choose to enable them. Use responsibly and only where permitted.
-
----
-
-## ✨ Features
-
-### Multiple subjects
-Edit not just the character, but **yourself (your persona)** and **any NPC present in the scene**. Each subject keeps its own independent profile, mind‑state and history. MindWare can analyze a character card or persona automatically to infer a sensible starting point.
-
-### 🧍 BODY
-- **Physique:** height, weight, apparent age, build, strength, flexibility, voice, pain threshold, perception…
-- **Appearance:** eye colour & type, hair colour / style / texture, skin tone, facial expression, make‑up, body‑hair level, wear & tear, and more.
-- **Features:** ears, tail, wings, horns and other traits.
-- **Wardrobe:** a wide outfit list, accessories, and an "outfit lock."
-- **Tattoos & piercings** by zone.
-- **Body presets** (feminine and masculine archetypes) you can load and tweak.
-
-### 🧠 MIND
-- **Personality matrix** grouped by Intellect, Emotions, Social, Will and Attitude toward you.
-- **Personality slider** — gradually dial a character down from fully themselves to a blank, doll‑like state.
-- **Control modules**, **sense locks**, **one‑shot emotion pulses**, **speech manner**, **orientation**, and a **memory block** (wipe by depth, or implant a custom memory by text).
-- **Perception filter** and **role dynamic** that colour how the character sees and relates to you.
-- **Personality presets** (Catgirl, Yandere, Tsundere, Mafia Boss, and many more), plus "Total Inversion" and a random roll.
-- **Hypnosis modes** — choose whether the subject is fully aware of the changes, only senses them, or simply experiences a seamlessly rewritten reality.
-
-### 🔞 Mature modules *(optional unlock)*
-Additional intimate parameters and dynamics, a **desire‑progression** system (preferences grow from unfamiliar to all‑consuming), atmosphere toggles, a **scene materialization** tool, and a few escalation mechanics — all gated, all opt‑in.
-
-### 🧬 BIO‑LAB *(optional unlock)*
-Deeper, body‑level changes: limb configuration, **races** (with signature traits auto‑applied), body modifications, cybernetic implants, body scale (doll / normal / giant), and regeneration.
-
-### ⚙️ Mechanics
-- **Psyche Integrity** — changes strain a subject's mind; push too far and the personality can break. Includes recovery and an optional pure‑sandbox mode with no consequences.
-- **Calibration mode** 🔧 — fix what the auto‑analysis got wrong by editing a subject's *true* baseline, with no story impact and nothing reported to the AI.
-- **Version history & rollback**, tied to chat messages (changes undo themselves when you delete or reroll a reply).
-- **Chaos Engine** — let the device spontaneously mutate things on its own.
-- **Bot Access** — optionally let the AI operate the console from within the story (including aiming it at *you*), scoped to whichever modules you've unlocked.
-
-### 💭 Inner thoughts
-Optionally have the character's honest inner monologue appear as a tidy, collapsible block right inside each reply — generated **together with the response**, so it costs no extra requests or tokens.
-
-### 🎨 Quality of life
-- **Bilingual UI** — English & Russian (auto‑detected, switchable).
-- **Light / dark theme** and an **interface size** slider.
-- **Draggable, resizable panel** that never slips off‑screen — tuned for both desktop and mobile.
-- **Tap any value to type it exactly**, plus fine `+`/`−` steppers on every slider.
-- **Preset previews** on hover / long‑press.
-- Alphabetically sorted option lists in whichever language you're using.
+> ⚠️ **Контент 18+.** MindWare рассчитан на взрослую ролевую игру. Базовые функции совершенно безобидны, но дополнительные **взрослые модули спрятаны за необязательной разблокировкой** и полностью скрыты, пока ты сам их не включишь (с подтверждением возраста). Используй ответственно и только там, где это допустимо.
 
 ---
 
-## 📦 Installation
+## ✨ Возможности
 
-1. In SillyTavern, open **Extensions → Install extension**.
-2. Paste this repository's URL and confirm.
-3. Open any character chat — a floating 🧠 bubble appears. Tap it and hit **Synchronize**.
+### Несколько субъектов
+Редактируй не только персонажа, но и **себя (свою персону)** и **любого NPC из сцены**. У каждого субъекта — собственный независимый профиль, состояние психики и история. MindWare может сам проанализировать карточку персонажа или персону, чтобы определить разумную отправную точку.
 
-*Manual install:* copy this folder into `SillyTavern/public/scripts/extensions/third-party/` and restart SillyTavern.
+- **Мультиперсоны:** каждая персона привязывается отдельным субъектом со своей аватаркой, именем и параметрами; при смене персоны можно привязать новую.
+- **Групповые чаты:** при подключении показывается список персонажей группы — ты сам выбираешь, к кому привязаться (без авто-подключения «вслепую»).
+
+### 🧍 ТЕЛО
+- **Характеристики:** рост, вес, видимый возраст, тип фигуры, сила, гибкость, голос, порог боли, восприятие…
+- **Внешность:** цвет и тип глаз, цвет / причёска / текстура волос, тон кожи, выражение лица, макияж, степень волосатости, степень износа и т.д.
+- **Особенности:** ушки, хвост, крылья, рога и другие черты.
+- **Гардероб:** большой список нарядов, аксессуары и «замок одежды».
+- **Тату и пирсинг** по зонам.
+- **Пресеты тела** (женские и мужские архетипы) — загружаешь и подправляешь; пресеты меняют в том числе пол.
+
+### 🧠 РАЗУМ
+- **Матрица личности**, сгруппированная по Интеллекту, Эмоциям, Социальному, Воле и Отношению к тебе.
+- **Ползунок «Личность»** — плавно убавляет персонажа от полностью себя до пустого, кукольного состояния (при низких значениях черты активно вычищаются из промпта).
+- **Мораль, самооценка, харизма, экспрессивность**, манера речи, ориентация, модули контроля, блокировка чувств, разовые импульсы эмоций.
+- **Блок памяти:** стирание по глубине или вживление собственного воспоминания текстом.
+- **Фильтр восприятия** и **ролевая позиция** — задают, как персонаж видит тебя и относится к тебе; плюс **выбор, к кому направлено «отношение»** (списком из привязанных).
+- **Пресеты личности** (Кошкодевочка, Яндере, Цундере, Босс мафии и многие другие), а также «Полная инверсия» и случайный бросок.
+- **Режимы гипноза** — выбираешь, осознаёт ли субъект изменения, лишь ощущает их, или просто живёт в бесшовно переписанной реальности.
+
+### 🔞 Взрослые модули *(необязательная разблокировка)*
+Дополнительные интимные параметры и динамики, система **прогрессии желания** (предпочтения растут от незнакомого до всепоглощающего), атмосферные тумблеры, инструмент **материализации в сцену**, метр развращённости и ещё несколько механик эскалации — всё за разблокировкой и по желанию.
+
+### 🧬 БИО-ЛАБ *(необязательная разблокировка)*
+Более глубокие изменения на уровне тела: конфигурация конечностей, **расы** (с автоматическим подтягиванием фирменных черт), боди-модификации, кибер-импланты, масштаб тела (кукла / норма / гигант) и регенерация.
+
+### ⚙️ Механики
+- **Целостность психики** — изменения нагружают разум субъекта; зайдёшь слишком далеко — личность может сломаться. Есть восстановление и режим чистой песочницы без последствий.
+- **Калибровка** 🔧 — исправить то, что авто-анализ определил неверно, редактируя *истинную* базу субъекта: без влияния на историю и без сообщения модели.
+- **История версий и откат**, привязанные к сообщениям чата (изменения сами отменяются при удалении или перегенерации ответа).
+- **Генератор хаоса** — устройство само спонтанно мутирует параметры.
+- **Метр развращённости** — по желанию: персонаж постепенно «развращается» в тоне по ходу сцены (с ручным ползунком).
+- **Доступ для бота** — по желанию ИИ может управлять консолью прямо из истории (в том числе направить её на *тебя*): менять параметры, применять пресеты, вызывать эмоции, вживлять память, задавать режим гипноза и делать сброс. Ограничено открытыми ветками.
+
+### 💭 Мысли персонажа
+По желанию честный внутренний монолог персонажа появляется аккуратным сворачиваемым блоком прямо внутри каждого ответа — генерируется **вместе с ответом**, так что не тратит ни лишних запросов, ни токенов.
+
+### 🎨 Удобство
+- **Двуязычный интерфейс** — русский и английский (автоопределение, переключается).
+- **Светлая / тёмная тема** и ползунок **размера интерфейса**.
+- **Перетаскиваемая панель**, которая никогда не уезжает за экран — настроена и под ПК, и под телефон.
+- **Тап по значению — ввод точного числа**, плюс кнопки `+`/`−` у каждого ползунка.
+- **Превью пресетов** по наведению / долгому нажатию.
+- Списки опций **отсортированы по алфавиту** на текущем языке.
+- **Вкл/выкл** прямо в панели расширений SillyTavern.
 
 ---
 
-## 🚀 Usage
+## 📦 Установка
 
-1. **Sync** a target (the character, yourself, or an NPC) so MindWare reads its baseline.
-2. **Adjust** any controls — your changes are staged as a draft.
-3. Press **APPLY** to push them into the story; the AI picks them up on its next reply.
-4. Use **🔧 Calibration** if the auto‑analysis was simply wrong about the original, and **↺** to discard pending changes.
-5. Unlock the optional modules from the **SYS** tab whenever you want them.
+1. В SillyTavern открой **Extensions → Install extension**.
+2. Вставь URL этого репозитория и подтверди.
+3. Открой любой чат с персонажем — появится плавающий пузырь 🧠. Нажми на него и выбери, к кому подключиться.
 
-State is saved **per chat**, so every conversation keeps its own configuration.
+*Ручная установка:* скопируй эту папку в `SillyTavern/public/scripts/extensions/third-party/` и перезапусти SillyTavern.
 
 ---
 
-## 📝 Notes
+## 🚀 Как пользоваться
 
-- Designed for and tested with SillyTavern; works with both chat‑ and text‑completion backends.
-- Some behaviours rely on the language model following instructions (e.g. inner thoughts and act‑aware features) — results vary by model.
-- All edits are local to your chats; nothing is sent anywhere except your own configured AI backend.
+1. **Подключись** к цели (персонаж, ты сам или NPC) — MindWare считает её исходное состояние. В групповом чате выбери персонажа из списка участников.
+2. **Настраивай** любые элементы — изменения копятся как черновик.
+3. Нажми **ПРИМЕНИТЬ** — они уйдут в историю; модель подхватит их в следующем ответе.
+4. Используй **🔧 Калибровку**, если авто-анализ просто ошибся в оригинале, и **↺**, чтобы сбросить несохранённые изменения.
+5. Открывай взрослые модули на вкладке **СИСТ**, когда захочешь.
+
+Состояние сохраняется **отдельно для каждого чата** — у каждого диалога своя конфигурация.
 
 ---
 
-## 🙏 Credits
+## 📝 Примечания
 
-Created by **Yumi4ka**. Built collaboratively with care. Contributions and feedback welcome.
+- Разработано и протестировано для SillyTavern; работает и с чат-, и с текст-комплишн бэкендами.
+- Часть поведения зависит от того, следует ли языковая модель инструкциям (например, мысли персонажа и учёт актов) — результат различается от модели к модели.
+- Все правки локальны для твоих чатов; никуда не отправляется ничего, кроме твоего собственного настроенного ИИ-бэкенда.
 
-*MindWare is a roleplay tool for consenting adult fiction. Please use it lawfully and respectfully.*
+---
+
+## 🙏 Авторство
+
+Создано **Yumi4ka**. Собрано совместно и с любовью. Идеи и фидбек приветствуются.
+
+*MindWare — инструмент для добровольной взрослой художественной ролевой игры. Пожалуйста, используй его законно и уважительно.*
