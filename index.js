@@ -103,6 +103,21 @@ function getPersonaAvatarPath() {
 async function generateRaw(cfg) {
     const ctx = getContext();
     const prompt = substitudeMacros(cfg.user_input || '');
+    // If the user picked a Connection Profile for scanning, route the request
+    // through it (its own stored API key/model — no extra prompt). Any failure
+    // or empty reply silently falls back to the chat's active API below.
+    const profileId = (extension_settings[EXT_ID] || {}).scanProfile || '';
+    const CMRS = ctx.ConnectionManagerRequestService;
+    if (profileId && CMRS) {
+        try {
+            const res = await CMRS.sendRequest(profileId, prompt, 2048, { extractData: true, stream: false });
+            const text = (res && typeof res === 'object') ? (res.content || '') : String(res || '');
+            if (text && text.trim()) return text;
+            console.warn('[MindWare] scan profile returned empty, falling back to active API');
+        } catch (e) {
+            console.error('[MindWare] scan profile generation failed, falling back to active API', e);
+        }
+    }
     if (ctx.generateQuietPrompt) return await ctx.generateQuietPrompt(prompt, false, false); // TEST@ST
     throw new Error('no quiet-generation API available');
 }
@@ -548,6 +563,8 @@ function initMindWare() {
       ui_ro_note: 'Read-only: this subject is you. Enable Self-Editing in SYS to seize control.',
       ui_addsubj: 'LINK NEW SUBJECT', ui_add_self: 'Link myself', ui_scan_scene: 'Scan scene for subjects',
       ui_cancel: 'Cancel', ui_back: 'BACK', ui_close: 'Close', ui_enable: 'Enable MindWare',
+      ui_scan_model: 'Scan model', ui_scan_model_default: '✨ Default (active API)',
+      ui_scan_model_hint: 'Pick a saved Connection Profile to run subject analysis through — it reuses that API\'s stored key, no extra setup. Leave on default to use the API you\'re chatting with.',
       ui_subj_max: 'Subject limit reached (max 5).', ui_subj_warn: 'More than 3 linked subjects may cause errors or slowdowns. Add anyway?',
       ui_scene_pick: 'DETECTED IN SCENE', ui_scene_none: 'No other subjects found in the scene.',
       ui_subj_linked: 'SUBJECT LINKED: {0}',
@@ -701,6 +718,8 @@ function initMindWare() {
       ui_ro_note: 'Только просмотр: этот субъект — ты. Включи «Редактирование себя» в СИСТ, чтобы перехватить контроль.',
       ui_addsubj: 'НОВЫЙ СУБЪЕКТ', ui_add_self: 'Подключить себя', ui_scan_scene: 'Сканировать сцену',
       ui_cancel: 'Отмена', ui_back: 'НАЗАД', ui_close: 'Закрыть', ui_enable: 'Включить MindWare',
+      ui_scan_model: 'Модель сканирования', ui_scan_model_default: '✨ По умолчанию (активный API)',
+      ui_scan_model_hint: 'Выбери сохранённый профиль подключения, через который пойдёт анализ субъектов — он берёт уже сохранённый ключ этого API, ничего настраивать не нужно. Оставь по умолчанию, чтобы использовать тот API, в котором идёт чат.',
       ui_subj_max: 'Достигнут предел субъектов (макс. 5).', ui_subj_warn: 'Больше 3 субъектов может вызывать ошибки или тормоза. Всё равно добавить?',
       ui_scene_pick: 'ОБНАРУЖЕНЫ В СЦЕНЕ', ui_scene_none: 'Других субъектов в сцене не найдено.',
       ui_subj_linked: 'СУБЪЕКТ ПОДКЛЮЧЁН: {0}',
@@ -1298,12 +1317,45 @@ function initMindWare() {
         <div class="inline-drawer-content">
           <label class="checkbox_label" style="display:flex;gap:8px;align-items:center;cursor:pointer">
             <input type="checkbox" id="mindware_enabled_cb"><span>${esc(t('ui_enable'))}</span></label>
+          <div id="mindware_scan_profile_row" style="margin-top:10px;display:none">
+            <label for="mindware_scan_profile"><small><b>${esc(t('ui_scan_model'))}</b></small></label>
+            <select id="mindware_scan_profile" class="text_pole widthNatural" style="width:100%"></select>
+            <small class="opacity50p" style="display:block;margin-top:4px">${esc(t('ui_scan_model_hint'))}</small>
+          </div>
         </div>
       </div>`;
     host.appendChild(div);
     const cb = div.querySelector('#mindware_enabled_cb');
     cb.checked = isEnabled();
     cb.addEventListener('change', () => setEnabled(cb.checked));
+    wireScanProfileSelect(div);
+  }
+
+  // Connection-profile picker for subject scanning. Uses the host's built-in
+  // Connection Manager service to populate + keep the dropdown in sync; storing
+  // only the profile id means we never touch keys ourselves.
+  function wireScanProfileSelect(root) {
+    const row = root.querySelector('#mindware_scan_profile_row');
+    const sel = root.querySelector('#mindware_scan_profile');
+    if (!row || !sel) return;
+    const ctx = getContext();
+    const CMRS = ctx.ConnectionManagerRequestService;
+    if (!CMRS || typeof CMRS.handleDropdown !== 'function') return; // host too old / CM disabled
+    const settings = extension_settings[EXT_ID] || (extension_settings[EXT_ID] = {});
+    try {
+      CMRS.handleDropdown('#mindware_scan_profile', settings.scanProfile || '', (profile) => {
+        extension_settings[EXT_ID] = Object.assign(extension_settings[EXT_ID] || {}, { scanProfile: (profile && profile.id) || '' });
+        saveSettingsDebounced();
+      });
+      // relabel the built-in empty option so "no profile" reads as "use active API"
+      const empty = sel.querySelector('option[value=""]');
+      if (empty) empty.textContent = t('ui_scan_model_default');
+      row.style.display = '';
+    } catch (e) {
+      // Connection Manager unavailable — leave the row hidden, scanning still
+      // works via the active API.
+      console.warn('[MindWare] connection-profile picker unavailable', e);
+    }
   }
 
   // groups: [{ref, cmds: [...]}], pulse: {ref, p}|null
