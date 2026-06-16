@@ -10,8 +10,9 @@
  */
 
 import { getContext, extension_settings } from '/scripts/extensions.js';
-import { eventSource, event_types, saveSettingsDebounced } from '/script.js';
+import { eventSource, event_types, saveSettingsDebounced, main_api } from '/script.js';
 import { user_avatar } from '/scripts/personas.js';
+import { oai_settings } from '/scripts/openai.js';
 
 const EXT_ID = 'mindware';
 const STATE_KEY = 'MindWare';          // per-chat state in chat metadata; matches the core's VAR_KEY
@@ -100,26 +101,74 @@ function getPersonaAvatarPath() {
 }
 
 // ── quiet generation (sync / persona / scene analysis) ──────────────────────────
+// Map a chat-completion source → [oai_settings model key, model <select> id].
+// Lets us mirror the model list the user already sees and temporarily swap the
+// model for a single scan WITHOUT touching the API, its key, or the preset.
+const MW_MODEL_BIND = {
+    openai: ['openai_model', '#model_openai_select'],
+    claude: ['claude_model', '#model_claude_select'],
+    openrouter: ['openrouter_model', '#model_openrouter_select'],
+    ai21: ['ai21_model', '#model_ai21_select'],
+    makersuite: ['google_model', '#model_google_select'],
+    vertexai: ['vertexai_model', '#model_vertexai_select'],
+    mistralai: ['mistralai_model', '#model_mistralai_select'],
+    custom: ['custom_model', '#model_custom_select'],
+    cohere: ['cohere_model', '#model_cohere_select'],
+    perplexity: ['perplexity_model', '#model_perplexity_select'],
+    groq: ['groq_model', '#model_groq_select'],
+    electronhub: ['electronhub_model', '#model_electronhub_select'],
+    chutes: ['chutes_model', '#model_chutes_select'],
+    nanogpt: ['nanogpt_model', '#model_nanogpt_select'],
+    deepseek: ['deepseek_model', '#model_deepseek_select'],
+    aimlapi: ['aimlapi_model', '#model_aimlapi_select'],
+    xai: ['xai_model', '#model_xai_select'],
+    pollinations: ['pollinations_model', '#model_pollinations_select'],
+    moonshot: ['moonshot_model', '#model_moonshot_select'],
+    fireworks: ['fireworks_model', '#model_fireworks_select'],
+    cometapi: ['cometapi_model', '#model_cometapi_select'],
+    azure_openai: ['azure_openai_model', '#azure_openai_model'],
+    zai: ['zai_model', '#model_zai_select'],
+    siliconflow: ['siliconflow_model', '#model_siliconflow_select'],
+    workers_ai: ['workers_ai_model', '#model_workers_ai_select'],
+    minimax: ['minimax_model', '#model_minimax_select'],
+};
+
+// [modelKey, selectId] for the active chat-completion source, else null
+// (kobold/textgen/etc. don't expose a per-source model var we can swap).
+function scanModelBinding() {
+    if (main_api !== 'openai') return null;
+    return MW_MODEL_BIND[oai_settings.chat_completion_source] || null;
+}
+// The model to scan on, or null to leave the active model untouched (no choice,
+// unsupported API, or the saved id isn't in the active source's list — e.g. the
+// user switched API since picking it).
+function scanModelOverride() {
+    try {
+        const chosen = (extension_settings[EXT_ID] || {}).scanModel || '';
+        if (!chosen) return null;
+        const bind = scanModelBinding();
+        if (!bind) return null;
+        const sel = document.querySelector(bind[1]);
+        const valid = sel && Array.from(sel.options).some(o => o.value === chosen);
+        return valid ? { key: bind[0], model: chosen } : null;
+    } catch (e) { return null; }
+}
+
 async function generateRaw(cfg) {
     const ctx = getContext();
+    if (!ctx.generateQuietPrompt) throw new Error('no quiet-generation API available'); // TEST@ST
     const prompt = substitudeMacros(cfg.user_input || '');
-    // If the user picked a Connection Profile for scanning, route the request
-    // through it (its own stored API key/model — no extra prompt). Any failure
-    // or empty reply silently falls back to the chat's active API below.
-    const profileId = (extension_settings[EXT_ID] || {}).scanProfile || '';
-    const CMRS = ctx.ConnectionManagerRequestService;
-    if (profileId && CMRS) {
-        try {
-            const res = await CMRS.sendRequest(profileId, prompt, 2048, { extractData: true, stream: false });
-            const text = (res && typeof res === 'object') ? (res.content || '') : String(res || '');
-            if (text && text.trim()) return text;
-            console.warn('[MindWare] scan profile returned empty, falling back to active API');
-        } catch (e) {
-            console.error('[MindWare] scan profile generation failed, falling back to active API', e);
-        }
+    // Optional scan-model swap: same API / key / active preset, only the model
+    // id changes for the duration of this one request, then restores (even on
+    // error). Everything else routes through the normal quiet-generation path.
+    const ov = scanModelOverride();
+    if (ov) {
+        const prev = oai_settings[ov.key];
+        oai_settings[ov.key] = ov.model;
+        try { return await ctx.generateQuietPrompt(prompt, false, false); }
+        finally { oai_settings[ov.key] = prev; }
     }
-    if (ctx.generateQuietPrompt) return await ctx.generateQuietPrompt(prompt, false, false); // TEST@ST
-    throw new Error('no quiet-generation API available');
+    return await ctx.generateQuietPrompt(prompt, false, false);
 }
 
 // ── prompt injection (ST-native, API-agnostic) ──────────────────────────────────
@@ -563,8 +612,8 @@ function initMindWare() {
       ui_ro_note: 'Read-only: this subject is you. Enable Self-Editing in SYS to seize control.',
       ui_addsubj: 'LINK NEW SUBJECT', ui_add_self: 'Link myself', ui_scan_scene: 'Scan scene for subjects',
       ui_cancel: 'Cancel', ui_back: 'BACK', ui_close: 'Close', ui_enable: 'Enable MindWare',
-      ui_scan_model: 'Scan model', ui_scan_model_default: '✨ Default (active API)',
-      ui_scan_model_hint: 'Pick a saved Connection Profile to run subject analysis through — it reuses that API\'s stored key, no extra setup. Leave on default to use the API you\'re chatting with.',
+      ui_scan_model: 'Scan model', ui_scan_model_default: '✨ Current model (active preset)',
+      ui_scan_model_hint: 'Run subject analysis on a different model of the API you\'re already connected to — same key, same active preset, only the model changes. Leave on default to scan with the model you chat on. (Chat Completion APIs only.)',
       ui_subj_max: 'Subject limit reached (max 5).', ui_subj_warn: 'More than 3 linked subjects may cause errors or slowdowns. Add anyway?',
       ui_scene_pick: 'DETECTED IN SCENE', ui_scene_none: 'No other subjects found in the scene.',
       ui_subj_linked: 'SUBJECT LINKED: {0}',
@@ -718,8 +767,8 @@ function initMindWare() {
       ui_ro_note: 'Только просмотр: этот субъект — ты. Включи «Редактирование себя» в СИСТ, чтобы перехватить контроль.',
       ui_addsubj: 'НОВЫЙ СУБЪЕКТ', ui_add_self: 'Подключить себя', ui_scan_scene: 'Сканировать сцену',
       ui_cancel: 'Отмена', ui_back: 'НАЗАД', ui_close: 'Закрыть', ui_enable: 'Включить MindWare',
-      ui_scan_model: 'Модель сканирования', ui_scan_model_default: '✨ По умолчанию (активный API)',
-      ui_scan_model_hint: 'Выбери сохранённый профиль подключения, через который пойдёт анализ субъектов — он берёт уже сохранённый ключ этого API, ничего настраивать не нужно. Оставь по умолчанию, чтобы использовать тот API, в котором идёт чат.',
+      ui_scan_model: 'Модель сканирования', ui_scan_model_default: '✨ Текущая модель (активный пресет)',
+      ui_scan_model_hint: 'Анализировать субъектов на другой модели того же API, к которому ты уже подключена — тот же ключ, тот же активный пресет, меняется только модель. Оставь по умолчанию, чтобы сканировать на модели чата. (Только для Chat Completion API.)',
       ui_subj_max: 'Достигнут предел субъектов (макс. 5).', ui_subj_warn: 'Больше 3 субъектов может вызывать ошибки или тормоза. Всё равно добавить?',
       ui_scene_pick: 'ОБНАРУЖЕНЫ В СЦЕНЕ', ui_scene_none: 'Других субъектов в сцене не найдено.',
       ui_subj_linked: 'СУБЪЕКТ ПОДКЛЮЧЁН: {0}',
@@ -1317,9 +1366,9 @@ function initMindWare() {
         <div class="inline-drawer-content">
           <label class="checkbox_label" style="display:flex;gap:8px;align-items:center;cursor:pointer">
             <input type="checkbox" id="mindware_enabled_cb"><span>${esc(t('ui_enable'))}</span></label>
-          <div id="mindware_scan_profile_row" style="margin-top:10px;display:none">
-            <label for="mindware_scan_profile"><small><b>${esc(t('ui_scan_model'))}</b></small></label>
-            <select id="mindware_scan_profile" class="text_pole widthNatural" style="width:100%"></select>
+          <div id="mindware_scan_model_row" style="margin-top:10px;display:none">
+            <label for="mindware_scan_model"><small><b>${esc(t('ui_scan_model'))}</b></small></label>
+            <select id="mindware_scan_model" class="text_pole widthNatural" style="width:100%"></select>
             <small class="opacity50p" style="display:block;margin-top:4px">${esc(t('ui_scan_model_hint'))}</small>
           </div>
         </div>
@@ -1328,34 +1377,47 @@ function initMindWare() {
     const cb = div.querySelector('#mindware_enabled_cb');
     cb.checked = isEnabled();
     cb.addEventListener('change', () => setEnabled(cb.checked));
-    wireScanProfileSelect(div);
+    wireScanModelSelect(div);
   }
 
-  // Connection-profile picker for subject scanning. Uses the host's built-in
-  // Connection Manager service to populate + keep the dropdown in sync; storing
-  // only the profile id means we never touch keys ourselves.
-  function wireScanProfileSelect(root) {
-    const row = root.querySelector('#mindware_scan_profile_row');
-    const sel = root.querySelector('#mindware_scan_profile');
+  // Model picker for subject scanning. Mirrors the model list of the active
+  // chat-completion source (so it shows exactly what the user already sees), and
+  // stores just the chosen model id — the swap happens in generateRaw, leaving
+  // the API, key and active preset untouched. Empty = scan on the current model.
+  function wireScanModelSelect(root) {
+    const row = root.querySelector('#mindware_scan_model_row');
+    const sel = root.querySelector('#mindware_scan_model');
     if (!row || !sel) return;
-    const ctx = getContext();
-    const CMRS = ctx.ConnectionManagerRequestService;
-    if (!CMRS || typeof CMRS.handleDropdown !== 'function') return; // host too old / CM disabled
-    const settings = extension_settings[EXT_ID] || (extension_settings[EXT_ID] = {});
-    try {
-      CMRS.handleDropdown('#mindware_scan_profile', settings.scanProfile || '', (profile) => {
-        extension_settings[EXT_ID] = Object.assign(extension_settings[EXT_ID] || {}, { scanProfile: (profile && profile.id) || '' });
-        saveSettingsDebounced();
-      });
-      // relabel the built-in empty option so "no profile" reads as "use active API"
-      const empty = sel.querySelector('option[value=""]');
-      if (empty) empty.textContent = t('ui_scan_model_default');
+
+    function repopulate() {
+      const bind = scanModelBinding();
+      const src = bind && D.querySelector(bind[1]);
+      if (!src) { row.style.display = 'none'; return; } // not a chat-completion API
       row.style.display = '';
-    } catch (e) {
-      // Connection Manager unavailable — leave the row hidden, scanning still
-      // works via the active API.
-      console.warn('[MindWare] connection-profile picker unavailable', e);
+      const saved = (extension_settings[EXT_ID] || {}).scanModel || '';
+      sel.innerHTML = '';
+      const def = D.createElement('option');
+      def.value = ''; def.textContent = t('ui_scan_model_default');
+      sel.appendChild(def);
+      let savedValid = false;
+      Array.from(src.options).forEach(o => {
+        if (!o.value) return; // skip "None"/placeholder rows
+        const op = D.createElement('option');
+        op.value = o.value; op.textContent = o.textContent || o.value;
+        if (o.value === saved) savedValid = true;
+        sel.appendChild(op);
+      });
+      sel.value = savedValid ? saved : '';
     }
+
+    repopulate();
+    // refresh right before the user opens it, so a freshly fetched/switched
+    // model list (or a changed API) is always reflected
+    sel.addEventListener('mousedown', repopulate);
+    sel.addEventListener('change', () => {
+      extension_settings[EXT_ID] = Object.assign(extension_settings[EXT_ID] || {}, { scanModel: sel.value || '' });
+      saveSettingsDebounced();
+    });
   }
 
   // groups: [{ref, cmds: [...]}], pulse: {ref, p}|null
