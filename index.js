@@ -10,9 +10,8 @@
  */
 
 import { getContext, extension_settings } from '/scripts/extensions.js';
-import { eventSource, event_types, saveSettingsDebounced, main_api } from '/script.js';
+import { eventSource, event_types, saveSettingsDebounced } from '/script.js';
 import { user_avatar } from '/scripts/personas.js';
-import { oai_settings } from '/scripts/openai.js';
 
 const EXT_ID = 'mindware';
 const STATE_KEY = 'MindWare';          // per-chat state in chat metadata; matches the core's VAR_KEY
@@ -134,23 +133,32 @@ const MW_MODEL_BIND = {
 };
 
 // [modelKey, selectId] for the active chat-completion source, else null
-// (kobold/textgen/etc. don't expose a per-source model var we can swap).
+// (kobold/textgen/etc. don't expose a per-source model var we can swap). Pulled
+// from getContext() so we never hard-import core modules (a failed import would
+// break the whole extension).
 function scanModelBinding() {
-    if (main_api !== 'openai') return null;
-    return MW_MODEL_BIND[oai_settings.chat_completion_source] || null;
+    try {
+        const ctx = getContext();
+        if (ctx.mainApi !== 'openai') return null;
+        const oai = ctx.chatCompletionSettings;
+        return (oai && MW_MODEL_BIND[oai.chat_completion_source]) || null;
+    } catch (e) { return null; }
 }
-// The model to scan on, or null to leave the active model untouched (no choice,
-// unsupported API, or the saved id isn't in the active source's list — e.g. the
-// user switched API since picking it).
+// { oai, key, model } to scan on, or null to leave the active model untouched
+// (no choice, unsupported API, or the saved id isn't in the active source's
+// list — e.g. the user switched API since picking it).
 function scanModelOverride() {
     try {
         const chosen = (extension_settings[EXT_ID] || {}).scanModel || '';
         if (!chosen) return null;
-        const bind = scanModelBinding();
+        const ctx = getContext();
+        if (ctx.mainApi !== 'openai') return null;
+        const oai = ctx.chatCompletionSettings;
+        const bind = oai && MW_MODEL_BIND[oai.chat_completion_source];
         if (!bind) return null;
         const sel = document.querySelector(bind[1]);
         const valid = sel && Array.from(sel.options).some(o => o.value === chosen);
-        return valid ? { key: bind[0], model: chosen } : null;
+        return valid ? { oai, key: bind[0], model: chosen } : null;
     } catch (e) { return null; }
 }
 
@@ -159,14 +167,21 @@ async function generateRaw(cfg) {
     if (!ctx.generateQuietPrompt) throw new Error('no quiet-generation API available'); // TEST@ST
     const prompt = substitudeMacros(cfg.user_input || '');
     // Optional scan-model swap: same API / key / active preset, only the model
-    // id changes for the duration of this one request, then restores (even on
-    // error). Everything else routes through the normal quiet-generation path.
+    // id changes for this one request, then restores. If the swapped model fails
+    // for any reason, retry once on the active model so scanning never breaks.
     const ov = scanModelOverride();
     if (ov) {
-        const prev = oai_settings[ov.key];
-        oai_settings[ov.key] = ov.model;
-        try { return await ctx.generateQuietPrompt(prompt, false, false); }
-        finally { oai_settings[ov.key] = prev; }
+        const prev = ov.oai[ov.key];
+        try {
+            ov.oai[ov.key] = ov.model;
+            return await ctx.generateQuietPrompt(prompt, false, false);
+        } catch (e) {
+            console.error('[MindWare] scan-model override failed, retrying on active model', e);
+            ov.oai[ov.key] = prev;
+            return await ctx.generateQuietPrompt(prompt, false, false);
+        } finally {
+            ov.oai[ov.key] = prev;
+        }
     }
     return await ctx.generateQuietPrompt(prompt, false, false);
 }
