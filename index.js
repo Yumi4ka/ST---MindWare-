@@ -628,6 +628,9 @@ function initMindWare() {
       ui_ro_note: 'Read-only: this subject is you. Enable Self-Editing in SYS to seize control.',
       ui_addsubj: 'LINK NEW SUBJECT', ui_add_self: 'Link myself', ui_scan_scene: 'Scan scene for subjects',
       ui_cancel: 'Cancel', ui_back: 'BACK', ui_close: 'Close', ui_enable: 'Enable MindWare',
+      ui_profiles: 'Saved profiles', ui_prof_save: 'Save current as…', ui_prof_load: 'Load', ui_prof_del: 'Delete',
+      ui_prof_none: 'No saved profiles yet. They are global — save one here and load it in any chat.',
+      ui_prof_name: 'Profile name:', ui_prof_saved: 'Profile saved: {0}', ui_prof_loaded: 'Loaded "{0}" as the new baseline', ui_prof_delq: 'Delete profile "{0}"?',
       ui_scan_model: 'Scan model', ui_scan_model_default: '✨ Current model (active preset)',
       ui_scan_model_hint: 'Run subject analysis on a different model of the API you\'re already connected to — same key, same active preset, only the model changes. Leave on default to scan with the model you chat on. (Chat Completion APIs only.)',
       ui_subj_max: 'Subject limit reached (max 5).', ui_subj_warn: 'More than 3 linked subjects may cause errors or slowdowns. Add anyway?',
@@ -783,6 +786,9 @@ function initMindWare() {
       ui_ro_note: 'Только просмотр: этот субъект — ты. Включи «Редактирование себя» в СИСТ, чтобы перехватить контроль.',
       ui_addsubj: 'НОВЫЙ СУБЪЕКТ', ui_add_self: 'Подключить себя', ui_scan_scene: 'Сканировать сцену',
       ui_cancel: 'Отмена', ui_back: 'НАЗАД', ui_close: 'Закрыть', ui_enable: 'Включить MindWare',
+      ui_profiles: 'Сохранённые профили', ui_prof_save: 'Сохранить текущее как…', ui_prof_load: 'Загрузить', ui_prof_del: 'Удалить',
+      ui_prof_none: 'Пока нет сохранённых профилей. Они глобальные — сохрани здесь и грузи в любом чате.',
+      ui_prof_name: 'Название профиля:', ui_prof_saved: 'Профиль сохранён: {0}', ui_prof_loaded: 'Загружено «{0}» как новая база', ui_prof_delq: 'Удалить профиль «{0}»?',
       ui_scan_model: 'Модель сканирования', ui_scan_model_default: '✨ Текущая модель (активный пресет)',
       ui_scan_model_hint: 'Анализировать субъектов на другой модели того же API, к которому ты уже подключена — тот же ключ, тот же активный пресет, меняется только модель. Оставь по умолчанию, чтобы сканировать на модели чата. (Только для Chat Completion API.)',
       ui_subj_max: 'Достигнут предел субъектов (макс. 5).', ui_subj_warn: 'Больше 3 субъектов может вызывать ошибки или тормоза. Всё равно добавить?',
@@ -1127,6 +1133,45 @@ function initMindWare() {
     } catch (e) { console.error('[MindWare] save failed', e); }
   }
 
+  /* ----- named global profiles: scan/tune once, reuse in any chat ----- */
+  // Stored in extension_settings (device-global, persisted by ST regardless of
+  // per-chat metadata), so they survive reloads and carry across chats.
+  function profileStore() {
+    const s = extension_settings[EXT_ID] || (extension_settings[EXT_ID] = {});
+    if (!s.profiles || typeof s.profiles !== 'object') s.profiles = {};
+    return s.profiles;
+  }
+  function profileNames() { return Object.keys(profileStore()).sort((a, b) => a.localeCompare(b)); }
+  function saveProfile(name) {
+    const nm = String(name || '').trim().slice(0, 40);
+    if (!nm) return;
+    profileStore()[nm] = clone(subj().draft); // capture the current (visible) config
+    saveSettingsDebounced();
+    if (panelOpen) renderApp();
+    flashApply(tf('ui_prof_saved', nm));
+  }
+  function loadProfile(name) {
+    const p = profileStore()[name];
+    if (!p) return;
+    const o = clone(p); migrate(o);          // forward-compat with any new keys
+    const ref = subj();
+    // load as the subject's NEW BASELINE (like calibration): original==applied
+    // ==draft, so it's the true self with no pending "modifications" — no APPLY.
+    ref.original = clone(o);
+    ref.applied = clone(o);
+    ref.draft = clone(o);
+    updateStateInject();                       // diffs recompute: loaded values are now the baseline
+    saveNow();
+    if (panelOpen) renderApp();
+    updateFooter();
+    flashApply(tf('ui_prof_loaded', name));
+  }
+  function deleteProfile(name) {
+    delete profileStore()[name];
+    saveSettingsDebounced();
+    if (panelOpen) renderApp();
+  }
+
   /* ================= TEXT HELPERS ================= */
 
   function mac(text) {
@@ -1257,6 +1302,39 @@ function initMindWare() {
       .concat(CHIP_GROUPS.filter(g => tabs.includes(g[7])).map(g => g[0]));
   }
 
+  // Full, self-explaining parameter spec for the bot directive: exact key names
+  // grouped by kind, each with its valid values — so the model uses precise keys
+  // and the WHOLE range, instead of improvising prose for only the obvious ones.
+  // Scoped to unlocked tabs, matching what validateRemote will actually accept.
+  function remoteSpec() {
+    const tabs = unlockedTabs();
+    const sHint = (k, min, max, unit, kind) => {
+      if (kind === 'cups') return 'cup AA-H';
+      if (kind === 'att') return '-100 hatred / 0 neutral / 100 love';
+      if (kind === 'step') return `integer ${min}-${max} (a count)`;
+      if (k === 'role_position') return '0 dominant / 50 equal / 100 servile';
+      if (k === 'perception_filter') return '0 realistic / 100 obsessive distortion';
+      if (k === 'user_dependency') return '0 independent / 100 cannot cope alone';
+      if (k === 'personality') return '0 self erased / 100 fully themselves';
+      if (k === 'morality') return '0 prudish / 100 depraved';
+      if (k === 'voice_pitch') return '0 deep / 100 high';
+      if (unit === 'cm' || unit === 'kg') return `${min}-${max} ${unit}`;
+      return `${min}-${max}`;
+    };
+    const sliders = SLIDERS.filter(s => tabs.includes(s[0]) && !s[1].startsWith('kink_'))
+      .map(([, k, min, max, unit, , kind]) => `${k} (${sHint(k, min, max, unit, kind)})`);
+    const kinks = SLIDERS.filter(s => tabs.includes(s[0]) && s[1].startsWith('kink_')).map(s => s[1]);
+    const toggles = TOGGLES.filter(t2 => tabs.includes(t2[0])).map(t2 => t2[1]);
+    const selects = SELECTS.filter(s => tabs.includes(s[0])).map(([, k, opts]) => `${k}: one of [${opts.join(' / ')}]`);
+    const chips = CHIP_GROUPS.filter(g => tabs.includes(g[7])).map(([k, items]) => `${k}: array from [${items.join(' / ')}]`);
+    const parts = [`NUMERIC (set to a number in the stated range) — ${sliders.join('; ')}`];
+    if (kinks.length) parts.push(`DESIRE sliders (each a number 0 none..100 craving) — ${kinks.join(', ')}`);
+    if (toggles.length) parts.push(`TOGGLES (true/false) — ${toggles.join(', ')}`);
+    if (selects.length) parts.push(`CHOICES (use the exact English option) — ${selects.join('; ')}`);
+    if (chips.length) parts.push(`LISTS (array of exact English items) — ${chips.join('; ')}`);
+    return parts.join('. ');
+  }
+
   function awareStateLine(ref) {
     const who = subjMacro(ref);
     if (ref.awareness === 'rewrite') {
@@ -1330,11 +1408,14 @@ function initMindWare() {
     if (!anyActive && !state.settings.botAccess && !state.settings.thoughts && !state.settings.corruption) return null;
     const lines = [`[MindWare reality-editing console — the operator has rewritten reality itself; the following are now facts of the world, not in-story events — ${sections.join(' ')}`];
     if (state.settings.botAccess) {
-      const targets = ['"user"'].concat((state.subjects || []).filter(s => s.kind === 'npc').map(s => '"' + s.name + '"'));
+      // every linked subject is a valid target by name — the primary character
+      // included — so in a group scene any bot can aim the device at any other.
+      const linkedNames = [state.charName].concat((state.subjects || []).filter(s => s.kind === 'npc').map(s => s.name)).filter(Boolean);
+      const targets = ['"user"'].concat(linkedNames.map(n => '"' + n + '"'));
       const unlockNote = state.settings.botUnlock
         ? ' You may also open hidden firmware branches when the story truly demands it by adding "unlock":"extreme" or "unlock":"bio" to the directive (this reveals additional parameters).'
         : '';
-      lines.push(`Remote access is enabled: the device may also be operated from within the story (by itself, by characters, or by events). To change parameters narratively, append at the VERY END of your reply, on its own line: <!--mw {"param":value,...}--> (invisible to the user). Add "target":<name> to aim at someone other than {{char}}; valid targets: ${targets.join(', ')}. Valid params: ${remoteKeys().join(',')}. Numbers are 0-100 unless stated (height cm, weight kg max 100, hair_length cm, apparent_age years, affection -100=hatred..100=love, arms/legs/eyes/breasts/members are counts); bust is a cup "AA"-"H"; toggles are booleans; selects use their English option names; array params take arrays of their English item names. You may also apply a whole preset at once with "preset":"Name" (any explicit params override it); available presets: ${Object.keys(MIND_PRESETS).concat(Object.keys(BODY_PRESETS)).join(', ')}. One-shot effects you may trigger in the same directive: "pulse":"<emotion>" floods them with a sudden artificial emotion (one of: ${PULSES.concat(state.settings.extreme ? PULSES_X : []).join(', ')}); "memory":"<text>" implants a false memory that feels entirely real to them; "pregnant":true makes them pregnant on the spot; "awareness":"full"|"feels"|"rewrite" sets how they experience changes (full = consciously aware; feels = senses them but not the cause; rewrite = it has always been so, nobody notices); "reset":true wipes ALL modifications and restores their original self.${unlockNote} Use it only when the story justifies it.`);
+      lines.push(`Remote access is enabled: the device may also be operated from within the story (by itself, by characters, or by events). To change parameters narratively, append at the VERY END of your reply, on its own line: <!--mw {"param":value,...}--> (invisible to the user). Add "target":<name> to choose WHO is affected; valid targets: ${targets.join(', ')}. In a group scene with several characters, ALWAYS set "target" to the exact name of the character you mean — you may aim the device at yourself, at another character, or at {{user}}, and a character may use it on someone else. Without "target" the change defaults to ${state.charName || '{{char}}'}. Use the EXACT key names and value formats listed below — never invent your own parameter names and never express a change only in prose; and use the FULL set freely, not just the few obvious ones. Available parameters — ${remoteSpec()}. You may also apply a whole preset at once with "preset":"Name" (any explicit params override it); available presets: ${Object.keys(MIND_PRESETS).concat(Object.keys(BODY_PRESETS)).join(', ')}. One-shot effects you may trigger in the same directive: "pulse":"<emotion>" floods them with a sudden artificial emotion (one of: ${PULSES.concat(state.settings.extreme ? PULSES_X : []).join(', ')}); "memory":"<text>" implants a false memory that feels entirely real to them; "pregnant":true makes them pregnant on the spot; "awareness":"full"|"feels"|"rewrite" sets how they experience changes (full = consciously aware; feels = senses them but not the cause; rewrite = it has always been so, nobody notices); "reset":true wipes ALL modifications and restores their original self.${unlockNote} Use it only when the story justifies it.`);
     }
     lines.push(`These modifications are ABSOLUTE and already in effect: they override the character card wherever they conflict, and they are NOT optional or contingent on the plot. Even if nothing in the story explains them, treat them as established physical and mental reality and reflect them in the named subject's body, behaviour and speech in EVERY reply — never ignore, downplay, postpone, or wait for narrative justification. Give the physical, appearance and personality changes the SAME weight as any intimate ones; do NOT focus only on the sexual parameters while neglecting the rest. Each subject above is named explicitly — apply each change strictly to that named character, even in a group scene with several characters present.`);
     if (state.settings.thoughts) {
@@ -1966,9 +2047,15 @@ function initMindWare() {
       ref = findUserSubj();
       if (!ref) { ref = createUserSubject(); created = true; refineSubject(ref, personaGenConfig()).catch(() => { }); }
     } else if (tgt) {
-      const hit = (state.subjects || []).find(s => s.name.toLowerCase() === tgt);
-      if (!hit) return; // unknown target: ignore rather than hit the char by mistake
-      ref = hit;
+      // the primary linked character is targetable by name too (so another bot
+      // can modify them in a group), not just NPC subjects
+      if (state.charName && tgt === state.charName.toLowerCase()) {
+        ref = state;
+      } else {
+        const hit = (state.subjects || []).find(s => s.name.toLowerCase() === tgt);
+        if (!hit) return; // unknown target: ignore rather than hit the char by mistake
+        ref = hit;
+      }
     }
 
     // "preset":"Name" expands into its params (explicit params still override it)
@@ -3332,6 +3419,18 @@ function initMindWare() {
           <button class="mw-btn" id="mw-block">${s.biolab ? t('ui_hide_b') : t('ui_unlock_b')}</button>
         </div>`),
       subjRows ? card(t('s_subjects'), subjRows) : '',
+      (() => {
+        const profs = profileNames();
+        const list = profs.length
+          ? `<div class="mw-select-row"><select class="mw-select" id="mw-prof-sel">${profs.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('')}</select></div>
+             <div class="mw-toggles">
+               <button class="mw-btn" id="mw-prof-load">${t('ui_prof_load')}</button>
+               <button class="mw-btn mw-danger" id="mw-prof-del">${t('ui_prof_del')}</button>
+             </div>`
+          : `<div class="mw-note">${t('ui_prof_none')}</div>`;
+        return card(t('ui_profiles'),
+          `<div class="mw-toggles"><button class="mw-btn" id="mw-prof-save">${t('ui_prof_save')}</button></div>${list}`);
+      })(),
       card(t('s_device'),
         `<div class="mw-toggles">
           <div class="mw-toggle ${s.gradual ? 'mw-on' : ''}" data-setting="gradual">${t('ui_gradual')}</div>
@@ -3614,6 +3713,22 @@ function initMindWare() {
       });
     });
 
+    const pSave = c.querySelector('#mw-prof-save');
+    if (pSave) pSave.addEventListener('click', () => {
+      const nm = W.prompt(t('ui_prof_name'), subjName(subj()));
+      if (nm && nm.trim()) saveProfile(nm);
+    });
+    const pLoad = c.querySelector('#mw-prof-load');
+    if (pLoad) pLoad.addEventListener('click', () => {
+      const sel = c.querySelector('#mw-prof-sel');
+      if (sel && sel.value) loadProfile(sel.value);
+    });
+    const pDel = c.querySelector('#mw-prof-del');
+    if (pDel) pDel.addEventListener('click', () => {
+      const sel = c.querySelector('#mw-prof-sel');
+      if (sel && sel.value) confirmDialog(tf('ui_prof_delq', sel.value), () => deleteProfile(sel.value));
+    });
+
     const xl = c.querySelector('#mw-xlock');
     if (xl) xl.addEventListener('click', () => {
       if (state.settings.extreme) {
@@ -3848,6 +3963,7 @@ function initMindWare() {
   }
 
   function cleanup() {
+    try { saveNow(); } catch (e) { /* flush latest state to chat metadata before the page goes away */ }
     clearInterval(watchdog);
     try { W.removeEventListener('resize', onWinResize); } catch (e) { /* ignore */ }
     try { W.removeEventListener('orientationchange', onWinResize); } catch (e) { /* ignore */ }
