@@ -472,15 +472,16 @@ function initMindWare() {
       p_pain_threshold: 'Pain Threshold', p_regeneration: 'Regeneration', p_perception: 'Perception', p_hairiness: 'Body Hair',
       p_submission: 'Submission', p_dominance: 'Dominance', p_intelligence: 'Intelligence',
       p_shyness: 'Shyness', p_aggression: 'Aggression', p_emotionality: 'Expressiveness', p_empathy: 'Empathy',
-      p_personality: 'Personality', p_charisma: 'Charisma', p_morality: 'Morality', p_self_esteem: 'Self-Esteem',
+      p_personality: 'Personality', p_charisma: 'Charisma', p_morality: 'Lewdness', p_self_esteem: 'Self-Esteem',
       p_user_dependency: 'Dependency on {{user}}', p_perception_filter: 'Perception of {{user}}', p_role_position: 'Role toward {{user}}',
+      p_user_dependency_base: 'Dependency', p_perception_filter_base: 'View of', p_role_position_base: 'Role',
       mo_Puritan: 'Puritan', mo_Modest: 'Modest', mo_Open: 'Open', mo_Shameless: 'Shameless', mo_Depraved: 'Depraved',
-      pc_Clear: 'Clear', pc_Idealization: 'Idealization', 'pc_Fear/Awe': 'Fear/Awe', pc_Objectification: 'Objectification', pc_Obsession: 'Obsession',
+      pc_Clear: 'Realistic', pc_Idealization: 'Idealization', 'pc_Fear/Awe': 'Fear/Awe', pc_Objectification: 'Objectification', pc_Obsession: 'Obsession',
       ro_Dominant: 'Dominant', ro_Equal: 'Equal', ro_Submissive: 'Submissive', ro_Servant: 'Servant',
       es_Low: 'Low', es_Unstable: 'Unstable', es_High: 'High',
       ki_Unaware: 'Unaware', ki_Curious: 'Curious', ki_Needy: 'Needy', ki_Addicted: 'Addicted',
       p_talkativeness: 'Talkativeness', p_affection: 'Attitude ({{user}})', p_affection_base: 'Attitude', p_courage: 'Courage',
-      ui_afftarget: 'Attitude toward',
+      ui_afftarget: 'This block is directed at',
       p_libido: 'Libido', p_sensitivity: 'Sensitivity', p_arousal: 'Constant Arousal',
       p_sadism: 'Sadism', p_masochism: 'Masochism', p_lewd_speech: 'Lewd Speech', p_fertility: 'Fertility',
       p_arms: 'Arms', p_legs: 'Legs', p_eyes: 'Eyes', p_breasts: 'Breasts', p_members: 'Penises',
@@ -651,7 +652,7 @@ function initMindWare() {
       p_submission: 'Покорность', p_dominance: 'Доминация', p_intelligence: 'Интеллект',
       p_shyness: 'Стыдливость', p_aggression: 'Агрессивность', p_emotionality: 'Эмоциональность', p_empathy: 'Эмпатия',
       p_talkativeness: 'Разговорчивость', p_affection: 'Отношение ({{user}})', p_affection_base: 'Отношение', p_courage: 'Смелость',
-      ui_afftarget: 'Отношение к',
+      ui_afftarget: 'Этот блок направлен на',
       p_libido: 'Либидо', p_sensitivity: 'Чувствительность', p_arousal: 'Пост. возбуждение',
       p_sadism: 'Садизм', p_masochism: 'Мазохизм', p_lewd_speech: 'Непристойность речи', p_fertility: 'Фертильность',
       p_arms: 'Руки', p_legs: 'Ноги', p_eyes: 'Глаза', p_breasts: 'Груди', p_members: 'Члены',
@@ -849,13 +850,14 @@ function initMindWare() {
       pr_Twink: 'Твинк', pr_Jock: 'Качок', pr_Bear: 'Медведь', pr_Bishonen: 'Бисёнэн',
       // --- v3.0 param labels ---
       p_eye_type: 'Тип глаз', p_hair_texture: 'Текстура волос', p_resting_face: 'Выражение лица', p_makeup: 'Макияж', p_wear_tear: 'Степень износа',
-      p_personality: 'Личность', p_charisma: 'Харизма', p_morality: 'Мораль', p_self_esteem: 'Самооценка',
+      p_personality: 'Личность', p_charisma: 'Харизма', p_morality: 'Раскрепощённость', p_self_esteem: 'Самооценка',
       p_user_dependency: 'Зависимость от {{user}}', p_perception_filter: 'Восприятие {{user}}', p_role_position: 'Роль к {{user}}',
+      p_user_dependency_base: 'Зависимость', p_perception_filter_base: 'Образ в глазах', p_role_position_base: 'Роль',
       p_ahegao: 'Ахегао-рефлекс',
       s_core: 'ОСНОВА ЛИЧНОСТИ',
       // --- tiers ---
       mo_Puritan: 'Пуританин', mo_Modest: 'Скромная', mo_Open: 'Раскованная', mo_Shameless: 'Бесстыдная', mo_Depraved: 'Развращённая',
-      pc_Clear: 'Ясное', pc_Idealization: 'Идеализация', 'pc_Fear/Awe': 'Страх/Трепет', pc_Objectification: 'Объективизация', pc_Obsession: 'Одержимость',
+      pc_Clear: 'Трезвый', pc_Idealization: 'Идеализация', 'pc_Fear/Awe': 'Страх/Трепет', pc_Objectification: 'Объективизация', pc_Obsession: 'Одержимость',
       ro_Dominant: 'Доминирование', ro_Equal: 'Равенство', ro_Submissive: 'Подчинение', ro_Servant: 'Служение',
       es_Low: 'Низкая', es_Unstable: 'Нестабильная', es_High: 'Высокая',
       ki_Unaware: 'Не знакома', ki_Curious: 'Интересуется', ki_Needy: 'Нужда', ki_Addicted: 'Зависимость',
@@ -902,10 +904,14 @@ function initMindWare() {
     const k = 'o_' + selKey + '_' + opt;
     return mac(L[k] !== undefined ? L[k] : (LANGS.en[k] !== undefined ? LANGS.en[k] : opt));
   }
+  // params that point AT a chosen target (the whole "attitude" block): their
+  // label and AI-command name carry the picked target instead of a baked-in
+  // {{user}}, so one target dropdown governs all of them.
+  const AFF_TARGET_KEYS = ['affection', 'user_dependency', 'perception_filter', 'role_position'];
   function pLabel(key) {
     if (KINK_KEY2NAME[key]) return mac(t('k_' + KINK_KEY2NAME[key]));
-    // "attitude" is shown toward the chosen target (default: char→user, user→char)
-    if (key === 'affection') return mac(t('p_affection_base')) + ' (' + affTargetName(subj()) + ')';
+    // the attitude block is shown toward the chosen target (default: char→user, user→char)
+    if (AFF_TARGET_KEYS.includes(key)) return mac(t('p_' + key + '_base')) + ' (' + affTargetName(subj()) + ')';
     return mac(t('p_' + key));
   }
   // English label for the AI command (kink keys map to their kink name)
@@ -1142,17 +1148,23 @@ function initMindWare() {
   /* ================= DIFF / DAMAGE ================= */
 
   // → list of {key, note (localized UI), cmd (English for AI), dmg}
-  // affMacro: who this subject's affection points at (a macro/name string)
-  function computeDiffs(from, to, affMacro) {
+  // ref: the subject these diffs belong to — fixes whom the toward-target block
+  // (attitude/dependency/perception/role) points at, for both the localized note
+  // and the English AI command.
+  function computeDiffs(from, to, ref) {
+    const affMacro = ref ? affTargetMacro(ref) : '{{user}}';
+    const affName = ref ? affTargetName(ref) : (mac('{{user}}') || 'user');
     const out = [];
     SLIDERS.forEach(([, key, min, max, , w]) => {
       const a = from[key], b = to[key];
       if (a !== b && b !== undefined) {
-        const enL = (key === 'affection' && affMacro) ? `Attitude (toward ${affMacro})` : enLabel(key);
+        const tgt = AFF_TARGET_KEYS.includes(key);
+        const noteLbl = tgt ? `${mac(t('p_' + key + '_base'))} (${affName})` : pLabel(key);
+        const cmdLbl = tgt ? `${LANGS.en['p_' + key + '_base']} (toward ${affMacro})` : enLabel(key);
         out.push({
           key,
-          note: `${pLabel(key)}: ${fmtVal(key, b)} (${t('d_was')} ${fmtVal(key, a)})`,
-          cmd: `${enL}: ${fmtVal(key, a, true)} -> ${fmtVal(key, b, true)}`,
+          note: `${noteLbl}: ${fmtVal(key, b)} (${t('d_was')} ${fmtVal(key, a)})`,
+          cmd: `${cmdLbl}: ${fmtVal(key, a, true)} -> ${fmtVal(key, b, true)}`,
           dmg: Math.max(1, Math.round(w * Math.abs(b - a) / (max - min))),
         });
       }
@@ -1257,7 +1269,7 @@ function initMindWare() {
     const sections = [];
     let anyActive = false;
     allRefs().forEach(ref => {
-      const diffs = computeDiffs(ref.original, ref.applied, affTargetMacro(ref));
+      const diffs = computeDiffs(ref.original, ref.applied, ref);
       const active = diffs.length || (state.settings.psyche && ref.psyche < 100);
       if (ref !== state && !active) return;
       if (active) anyActive = true;
@@ -1548,7 +1560,7 @@ function initMindWare() {
   function vstr(v) { return 'v' + (v / 10).toFixed(1); }
 
   function applyChanges() {
-    const entries = allRefs().map(ref => ({ ref, diffs: computeDiffs(ref.applied, ref.draft, affTargetMacro(ref)) }));
+    const entries = allRefs().map(ref => ({ ref, diffs: computeDiffs(ref.applied, ref.draft, ref) }));
     const pulse = state.pulse && refOf(state.pulse.sid) ? state.pulse : null;
     const custom = state.custom.trim();
     const memo = state.memo && state.memo.text.trim() && refOf(state.memo.sid) ? state.memo : null;
@@ -1635,7 +1647,7 @@ function initMindWare() {
   // (original = applied = draft) for the changed keys. No psyche hit, no command to
   // the bot — it's "this was always so", a correction of what sync mis-inferred.
   function commitCalibration() {
-    const entries = allRefs().map(ref => ({ ref, diffs: computeDiffs(ref.applied, ref.draft, affTargetMacro(ref)) }));
+    const entries = allRefs().map(ref => ({ ref, diffs: computeDiffs(ref.applied, ref.draft, ref) }));
     const total = entries.reduce((s, e) => s + e.diffs.length, 0);
     if (!total) { flashApply(t('ui_nopending'), true); return; }
     entries.forEach(e => e.diffs.forEach(d => {
@@ -1662,11 +1674,11 @@ function initMindWare() {
     const snap = entry.snapshot.c !== undefined ? entry.snapshot : { c: entry.snapshot, subs: {} };
     const subs = snap.subs || {};
     const groups = [];
-    const diffsC = computeDiffs(state.applied, snap.c);
+    const diffsC = computeDiffs(state.applied, snap.c, state);
     if (diffsC.length) groups.push({ ref: state, cmds: [`state reverts: ${diffsC.map(d => d.cmd).join('; ')}`] });
     (state.subjects || []).forEach(s => {
       const target = subs[s.id] || s.original;
-      const diffs = computeDiffs(s.applied, target, affTargetMacro(s));
+      const diffs = computeDiffs(s.applied, target, s);
       if (diffs.length) groups.push({ ref: s, cmds: [`state reverts: ${diffs.map(d => d.cmd).join('; ')}`] });
     });
 
@@ -1686,7 +1698,7 @@ function initMindWare() {
   function resetSubject(sid) {
     const ref = refOf(sid);
     if (ref === state) { rollbackTo(10); return; }
-    const diffs = computeDiffs(ref.applied, ref.original, affTargetMacro(ref));
+    const diffs = computeDiffs(ref.applied, ref.original, ref);
     if (!diffs.length) { flashApply(t('ui_nopending'), true); return; }
     ref.applied = clone(ref.original);
     ref.draft = clone(ref.original);
@@ -1792,7 +1804,7 @@ function initMindWare() {
     const ref = refs[Math.floor(Math.random() * refs.length)];
     const to = clone(ref.applied);
     pickRandom(chaosPool(unlockedTabs()), 2).forEach(p => mutateSet(to, p));
-    const diffs = computeDiffs(ref.applied, to, affTargetMacro(ref));
+    const diffs = computeDiffs(ref.applied, to, ref);
     if (!diffs.length) return;
     if (state.settings.psyche) {
       const dmg = diffs.reduce((s, d) => s + d.dmg, 0) * (AWARE_MULT[ref.awareness] || 1);
@@ -1961,7 +1973,7 @@ function initMindWare() {
       if (AWARE_MODES.includes(aw) && ref.awareness !== aw) { ref.awareness = aw; botMeta = true; botNotes.push(t('s_awareness') + ': ' + t('aw_' + aw)); }
     }
     if (j.reset === true) {
-      const rev = computeDiffs(ref.applied, ref.original, affTargetMacro(ref));
+      const rev = computeDiffs(ref.applied, ref.original, ref);
       ref.applied = clone(ref.original); ref.draft = clone(ref.original);
       ref.psyche = 100; ref.collapsed = false; ref.corruption = 0;
       botMeta = true;
@@ -1990,7 +2002,7 @@ function initMindWare() {
     ['pulse', 'memory', 'pregnant', 'awareness', 'reset'].forEach(k => delete j[k]);
 
     const to = validateRemote(j, ref.applied);
-    const diffs = computeDiffs(ref.applied, to, affTargetMacro(ref));
+    const diffs = computeDiffs(ref.applied, to, ref);
     if (!diffs.length && !created && !unlocked && !botPulse && !botCmds.length && !botMeta) return;
 
     const prefix = ref === state ? '' : subjName(ref) + ': ';
@@ -2022,8 +2034,8 @@ function initMindWare() {
   /* ================= SYNC (card / persona / scene analysis) ================= */
 
   function jsonSpec() {
-    const sliderKeys = SLIDERS.filter(s => !s[1].startsWith('kink_') && !['arousal', 'bust', 'personality', 'perception_filter', 'role_position', 'user_dependency', 'wear_tear', 'resistance', 'auto_stim'].includes(s[1])).map(([, k, min, max, unit]) =>
-      `"${k}": number ${min}-${max}${unit ? ' (' + unit + ')' : ''}${k === 'voice_pitch' ? ' (0=deep bass, 100=squeaky)' : ''}${k === 'affection' ? ' (-100=hatred, 0=indifferent, 100=love)' : ''}${k === 'height' ? ' (use "scale" for tiny/giant beings)' : ''}`).join(', ');
+    const sliderKeys = SLIDERS.filter(s => !['arousal', 'bust', 'personality', 'wear_tear', 'resistance', 'auto_stim'].includes(s[1])).map(([, k, min, max, unit]) =>
+      `"${k}": number ${min}-${max}${unit ? ' (' + unit + ')' : ''}${k === 'voice_pitch' ? ' (0=deep bass, 100=squeaky)' : ''}${k === 'affection' ? ' (attitude toward {{user}}: -100=hatred, 0=indifferent, 100=love)' : ''}${k === 'user_dependency' ? ' (emotional reliance on {{user}}: 0=fully self-sufficient, 100=cannot cope without them)' : ''}${k === 'perception_filter' ? ' (how they see {{user}}: 0=realistic, rising = idealized / fearful / objectified / obsessive distortion)' : ''}${k === 'role_position' ? ' (social stance toward {{user}}: 0=dominant, 50=equal, 100=servile)' : ''}${k.startsWith('kink_') ? ' (baseline sexual interest in ' + KINK_KEY2NAME[k] + ': 0=none/unaware, 100=craving — infer only what the sheet genuinely supports, otherwise low)' : ''}${k === 'height' ? ' (use "scale" for tiny/giant beings)' : ''}`).join(', ');
     const selectKeys = SELECTS.filter(s => !['memory_wipe', 'gestation'].includes(s[1])).map(([, k, opts]) =>
       `"${k}": one of [${opts.map(o => '"' + o + '"').join(', ')}]`).join(', ');
     const toggleKeys = TOGGLES.filter(t2 => t2[0] === 'body' && !['outfit_lock', 'body_writing'].includes(t2[1])).map(([, k]) => `"${k}": boolean`).join(', ');
@@ -2076,7 +2088,7 @@ function initMindWare() {
     const r = heightRange(o);
     if (Number.isFinite(hv)) o.height = Math.min(r[1], Math.max(r[0], Math.round(hv)));
     o.arousal = 0;
-    o.personality = 100; o.perception_filter = 0; o.role_position = 50; o.user_dependency = 0; o.wear_tear = 0; o.resistance = 0; o.auto_stim = 0;
+    o.personality = 100; o.wear_tear = 0; o.resistance = 0; o.auto_stim = 0; // dependency/perception/role now auto-detected from the card
     o.memory_wipe = 'None';
     o.gestation = 'Normal';
     o.erozones = [];
@@ -3192,7 +3204,8 @@ function initMindWare() {
         sliderRow(sliderDef('self_esteem')) +
         grp('g_will', ['dominance', 'submission', 'aggression']) +
         `<div class="mw-grp">${t('g_attitude')}</div>` +
-        sliderRow(sliderDef('affection')) + affTargetSelect() +
+        affTargetSelect() +
+        sliderRow(sliderDef('affection')) +
         sliderRow(sliderDef('user_dependency')) +
         sliderRow(sliderDef('perception_filter')) +
         sliderRow(sliderDef('role_position'))),
