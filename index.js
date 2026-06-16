@@ -3853,7 +3853,7 @@ function initMindWare() {
       setTimeout(addSettingsUi, 1500); // extensions drawer may not be ready yet
       applyEnabled();
 
-      console.info('[MindWare] v1.0 neural link ready');
+      console.info('[MindWare] v1.0 neural link ready (scan-model build)');
     } catch (e) {
       console.error('[MindWare] init failed', e);
       if (initTries++ < 10) setTimeout(init, 2000);
